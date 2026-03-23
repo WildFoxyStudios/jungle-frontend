@@ -217,23 +217,7 @@ export function Navbar() {
             {notifOpen && <NotifDropdown onClose={() => setNotifOpen(false)} />}
           </div>
 
-          {user && (
-            <Link
-              href={`/profile/${user.id}`}
-              className="flex items-center gap-1.5 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <Avatar
-                src={user.profile_picture_url}
-                alt={user.full_name ?? user.username}
-                size="sm"
-                fallbackName={user.full_name ?? user.username}
-              />
-              <ChevronDown
-                size={14}
-                className="text-slate-500 hidden lg:block"
-              />
-            </Link>
-          )}
+          <UserMenu />
         </div>
       </div>
     </header>
