@@ -129,33 +129,6 @@ export function SidebarLeft({ collapsed }: { collapsed?: boolean }) {
           />
         ))}
       </div>
-
-      {/* Bottom actions */}
-      <div className="border-t border-slate-200 dark:border-gray-700 p-2 space-y-0.5">
-        {bottomLinks.map(({ href, icon, label }) => (
-          <SidebarItem
-            key={href}
-            href={href}
-            icon={icon}
-            label={label}
-            collapsed={collapsed}
-          />
-        ))}
-        <button
-          onClick={logout}
-          title={collapsed ? "Cerrar sesión" : undefined}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors w-full",
-            "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20",
-            collapsed ? "justify-center" : "",
-          )}
-        >
-          <LogOut size={20} className="shrink-0" />
-          {!collapsed && (
-            <span className="text-sm font-medium">Cerrar sesión</span>
-          )}
-        </button>
-      </div>
     </aside>
   );
 }
