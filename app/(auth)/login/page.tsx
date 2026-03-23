@@ -63,7 +63,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex w-16 h-16 rounded-2xl bg-white/10 backdrop-blur items-center justify-center mb-4">
-            <span className="text-white font-black text-3xl">S</span>
+            <img src="/icon.svg" alt="Logo" className="w-12 h-12" />
           </div>
           <h1 className="text-3xl font-black text-white">Social</h1>
           <p className="text-indigo-200 mt-1">

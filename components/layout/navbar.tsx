@@ -82,11 +82,11 @@ export function Navbar() {
       <div className="flex items-center h-full px-3 gap-2 max-w-screen-2xl mx-auto">
         {/* Logo */}
         <Link href="/home" className="shrink-0 flex items-center gap-2 mr-2">
-          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center">
-            <span className="text-white font-black text-lg leading-none">
-              S
-            </span>
-          </div>
+          <img 
+            src="/icon.svg" 
+            alt="Logo" 
+            className="w-9 h-9"
+          />
           <span className="hidden lg:block font-bold text-indigo-600 text-lg">
             Social
           </span>
