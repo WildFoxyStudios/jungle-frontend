@@ -7,7 +7,9 @@ import {
   HeartHandshake, ShoppingCart, Tv, Video,
   Clock, Globe, Flag, Radio
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRealtime } from "@/contexts/RealtimeContext";
+import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const mainLinks = [
@@ -72,7 +74,7 @@ function SidebarItem({ href, icon: Icon, label, badge, collapsed }: SidebarItemP
 }
 
 export function SidebarLeft({ collapsed }: { collapsed?: boolean }) {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { unreadCount } = useRealtime();
 
   return (
