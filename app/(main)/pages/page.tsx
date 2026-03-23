@@ -497,12 +497,14 @@ function PageCardSkeleton() {
 // ─── Create Page Modal ────────────────────────────────────────────────────────
 
 const PAGE_CATEGORIES: { value: PageCategory; label: string }[] = [
-  { value: "business", label: "Negocio" },
+  { value: "local_business", label: "Negocio local" },
+  { value: "company", label: "Empresa" },
+  { value: "brand", label: "Marca" },
+  { value: "artist", label: "Artista" },
+  { value: "public_figure", label: "Figura pública" },
   { value: "entertainment", label: "Entretenimiento" },
+  { value: "cause", label: "Causa / ONG" },
   { value: "community", label: "Comunidad" },
-  { value: "education", label: "Educación" },
-  { value: "health_wellness", label: "Salud y bienestar" },
-  { value: "nonprofit", label: "Sin fines de lucro" },
   { value: "sports", label: "Deportes" },
   { value: "other", label: "Otro" },
 ];

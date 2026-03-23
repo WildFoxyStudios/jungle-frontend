@@ -588,12 +588,14 @@ export interface MarketplaceCategory {
 // ─── Pages ───────────────────────────────────────────────────────────────────
 
 export type PageCategory =
-  | "business"
+  | "local_business"
+  | "company"
+  | "brand"
+  | "artist"
+  | "public_figure"
   | "entertainment"
+  | "cause"
   | "community"
-  | "education"
-  | "health_wellness"
-  | "nonprofit"
   | "sports"
   | "other";
 
