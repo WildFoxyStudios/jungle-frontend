@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Search,
   Bell,
@@ -235,8 +235,8 @@ function NavLink({
   icon: React.ReactNode;
   label: string;
 }) {
-  const isActive =
-    typeof window !== "undefined" && window.location.pathname.startsWith(href);
+  const pathname = usePathname();
+  const isActive = pathname === href || pathname.startsWith(href + "/");
 
   return (
     <Link
