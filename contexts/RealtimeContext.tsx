@@ -228,14 +228,30 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         // onerror is always followed by onclose; nothing to do here
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (!isMounted.current) return;
         setIsConnected(false);
         wsRef.current = null;
 
-        const token = tokenStorage.get();
-        if (token && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
+        // 1006 = abnormal closure (server rejected HTTP upgrade, e.g. 401)
+        // 1008 = policy violation, 4001 = custom auth failure
+        // If we never reached OPEN state and got 1006, it's likely an auth error
+        const wasNeverOpen = event.code === 1006;
+        const isAuthFailure = event.code === 1008 || event.code === 4001;
+
+        // After 2 consecutive 1006 failures, assume auth issue and stop retrying
+        if (wasNeverOpen) {
           reconnectAttempts.current += 1;
+          if (reconnectAttempts.current >= 2) return; // stop retrying on repeated auth failures
+        }
+
+        const token = tokenStorage.get();
+        if (
+          token &&
+          !isAuthFailure &&
+          reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS
+        ) {
+          if (!wasNeverOpen) reconnectAttempts.current += 1;
           const delay =
             BASE_RECONNECT_DELAY_MS *
             Math.pow(2, reconnectAttempts.current - 1);

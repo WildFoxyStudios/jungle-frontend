@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Flag,
@@ -18,7 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { pagesApi } from "@/lib/api-pages";
-import { useApi, useMutation, useInfiniteApi } from "@/hooks/useApi";
+import { useApi, useMutation } from "@/hooks/useApi";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
@@ -106,17 +106,38 @@ function DiscoverTab({
   search: string;
   onSearchChange: (v: string) => void;
 }) {
-  const {
-    items: pages,
-    loading,
-    loadingMore,
-    hasMore,
-    loadMore,
-  } = useInfiniteApi(
-    (offset, limit) => pagesApi.list({ limit, cursor: String(offset) }),
-    [],
-    12,
-  );
+  const [pages, setPages] = useState<Page[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    setLoading(true);
+    pagesApi.listPaginated({ limit: 12 })
+      .then((res) => {
+        setPages(res.data);
+        setNextCursor(res.next_cursor ?? undefined);
+        setHasMore(res.has_more);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await pagesApi.listPaginated({ limit: 12, cursor: nextCursor });
+      setPages((prev) => [...prev, ...res.data]);
+      setNextCursor(res.next_cursor ?? undefined);
+      setHasMore(res.has_more);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, nextCursor]);
 
   const sentinelRef = useInfiniteScroll({
     onLoadMore: loadMore,

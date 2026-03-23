@@ -66,6 +66,12 @@ export interface PageInsights {
   engagement_rate: number;
 }
 
+export interface PaginatedPagesResponse {
+  data: Page[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
 export interface PagesQuery {
   limit?: number;
   cursor?: string;
@@ -79,6 +85,10 @@ export const pagesApi = {
   /** GET /pages – public pages ordered by followers */
   list: (params?: PagesQuery) =>
     api.get<Page[]>("/pages", { params }).then((r) => r.data),
+
+  /** GET /pages – cursor-paginated public pages */
+  listPaginated: (params?: PagesQuery) =>
+    api.get<PaginatedPagesResponse>("/pages", { params }).then((r) => r.data),
 
   /** GET /pages/mine – pages the authenticated user manages */
   getMine: () => api.get<Page[]>("/pages/mine").then((r) => r.data),
