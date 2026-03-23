@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AvatarProps {
@@ -63,9 +62,7 @@ export function Avatar({ src, alt, size = "md", online, className, onClick, fall
             {initials}
           </span>
         ) : (
-          <span className="flex items-center justify-center w-full h-full text-white">
-            <User size={s.icon} />
-          </span>
+          <Image src="/user.svg" alt="Usuario" fill className="object-cover p-1" sizes="112px" />
         )}
       </div>
       {online !== undefined && (
