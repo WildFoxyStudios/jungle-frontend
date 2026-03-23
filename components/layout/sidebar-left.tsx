@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Users, MessageCircle, Bell, Bookmark, Calendar, Briefcase,
-  HeartHandshake, ShoppingCart, Tv, Video, Settings, LogOut,
+  HeartHandshake, ShoppingCart, Tv, Video,
   Clock, Globe, Flag, Radio
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,9 +30,6 @@ const mainLinks = [
   { href: "/live",          icon: Radio,          label: "En Vivo" },
 ];
 
-const bottomLinks = [
-  { href: "/settings", icon: Settings, label: "Configuración" },
-];
 
 interface SidebarItemProps {
   href: string;

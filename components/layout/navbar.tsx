@@ -11,7 +11,6 @@ import {
   Users,
   Tv,
   Store,
-  ChevronDown,
   X,
   Loader2,
 } from "lucide-react";
@@ -24,6 +23,7 @@ import { NotifBadge } from "@/components/ui/badge";
 import { NotifDropdown } from "@/components/layout/notif-dropdown";
 import type { SearchResults } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "./user-menu";
 
 const navLinks = [
   { href: "/home", icon: Home, label: "Inicio" },
