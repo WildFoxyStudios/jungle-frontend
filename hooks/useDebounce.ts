@@ -1,0 +1,26 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+/**
+ * Returns a debounced version of `value` that only updates after
+ * `delay` milliseconds have elapsed since the last change.
+ *
+ * Useful for search-as-you-type inputs to avoid excessive API calls.
+ *
+ * @example
+ * const debouncedQuery = useDebounce(searchQuery, 400);
+ * useEffect(() => {
+ *   if (debouncedQuery) searchApi.search({ q: debouncedQuery });
+ * }, [debouncedQuery]);
+ */
+export function useDebounce<T>(value: T, delay = 400): T {
+  const [debounced, setDebounced] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
