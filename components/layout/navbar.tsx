@@ -85,7 +85,7 @@ export function Navbar() {
           <img 
             src="/logo2.svg" 
             alt="Logo" 
-            className="h-9 w-auto"
+            className="h-11 w-auto"
           />
         </Link>
 
