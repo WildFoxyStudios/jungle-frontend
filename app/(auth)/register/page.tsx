@@ -90,8 +90,8 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-md animate-fade-in-up">
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-white/10 backdrop-blur items-center justify-center mb-3">
-            <img src="/icon.svg" alt="Logo" className="w-10 h-10" />
+          <div className="inline-flex mb-3">
+            <img src="/logo2.svg" alt="Logo" className="h-16 w-auto" />
           </div>
           <h1 className="text-2xl font-black text-white">Crear cuenta</h1>
           <p className="text-indigo-200 text-sm mt-1">

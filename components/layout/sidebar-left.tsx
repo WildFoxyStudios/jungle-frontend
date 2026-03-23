@@ -74,7 +74,6 @@ function SidebarItem({ href, icon: Icon, label, badge, collapsed }: SidebarItemP
 }
 
 export function SidebarLeft({ collapsed }: { collapsed?: boolean }) {
-  const { logout } = useAuth();
   const { unreadCount } = useRealtime();
 
   return (

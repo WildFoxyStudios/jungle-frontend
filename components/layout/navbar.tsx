@@ -83,13 +83,10 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/home" className="shrink-0 flex items-center gap-2 mr-2">
           <img 
-            src="/icon.svg" 
+            src="/logo2.svg" 
             alt="Logo" 
-            className="w-9 h-9"
+            className="h-9 w-auto"
           />
-          <span className="hidden lg:block font-bold text-indigo-600 text-lg">
-            Social
-          </span>
         </Link>
 
         {/* Search */}

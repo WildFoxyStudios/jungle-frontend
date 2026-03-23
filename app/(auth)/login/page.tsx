@@ -62,10 +62,9 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md animate-fade-in-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-white/10 backdrop-blur items-center justify-center mb-4">
-            <img src="/icon.svg" alt="Logo" className="w-12 h-12" />
+          <div className="inline-flex mb-4">
+            <img src="/logo2.svg" alt="Logo" className="h-20 w-auto" />
           </div>
-          <h1 className="text-3xl font-black text-white">Social</h1>
           <p className="text-indigo-200 mt-1">
             Conecta con tus amigos y el mundo
           </p>
