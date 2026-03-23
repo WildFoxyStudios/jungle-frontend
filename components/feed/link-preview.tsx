@@ -3,6 +3,43 @@
 import { useEffect, useState } from "react";
 import { Link2 } from "lucide-react";
 
+// ─── Embed detection ──────────────────────────────────────────────────────────
+
+function getYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1).split("?")[0];
+    if (u.hostname.includes("youtube.com")) {
+      return u.searchParams.get("v");
+    }
+  } catch {}
+  return null;
+}
+
+function getVimeoId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("vimeo.com")) {
+      const match = u.pathname.match(/\/(\d+)/);
+      return match ? match[1] : null;
+    }
+  } catch {}
+  return null;
+}
+
+function getSpotifyEmbed(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("spotify.com")) {
+      // https://open.spotify.com/track/xxx → https://open.spotify.com/embed/track/xxx
+      return url.replace("open.spotify.com/", "open.spotify.com/embed/");
+    }
+  } catch {}
+  return null;
+}
+
+// ─── OG Preview data ──────────────────────────────────────────────────────────
+
 interface LinkPreviewData {
   title?: string;
   description?: string;
@@ -11,39 +48,91 @@ interface LinkPreviewData {
   domain?: string;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function LinkPreview({ url }: { url: string }) {
+  const youtubeId = getYouTubeId(url);
+  const vimeoId = getVimeoId(url);
+  const spotifyEmbed = getSpotifyEmbed(url);
+
+  // ── YouTube embed ──────────────────────────────────────────────────────────
+  if (youtubeId) {
+    return (
+      <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-black aspect-video">
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+          title="YouTube video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  // ── Vimeo embed ────────────────────────────────────────────────────────────
+  if (vimeoId) {
+    return (
+      <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-black aspect-video">
+        <iframe
+          src={`https://player.vimeo.com/video/${vimeoId}?byline=0&portrait=0`}
+          title="Vimeo video"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  // ── Spotify embed ──────────────────────────────────────────────────────────
+  if (spotifyEmbed) {
+    return (
+      <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+        <iframe
+          src={spotifyEmbed}
+          title="Spotify"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          className="w-full"
+          height="152"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  // ── Generic OG preview ─────────────────────────────────────────────────────
+  return <OGPreview url={url} />;
+}
+
+// ─── OG Preview (generic links) ───────────────────────────────────────────────
+
+function OGPreview({ url }: { url: string }) {
   const [data, setData] = useState<LinkPreviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-
     async function fetchPreview() {
       try {
         const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
-        if (!res.ok) throw new Error("Failed to fetch");
+        if (!res.ok) throw new Error();
         const json = await res.json();
-        
         if (mounted) {
-          if (json.error || (!json.title && !json.image)) {
-            setError(true);
-          } else {
-            setData(json);
-          }
+          if (json.error || (!json.title && !json.image)) setError(true);
+          else setData(json);
         }
-      } catch (err) {
+      } catch {
         if (mounted) setError(true);
       } finally {
         if (mounted) setLoading(false);
       }
     }
-
     fetchPreview();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [url]);
 
   if (loading) {
@@ -54,9 +143,7 @@ export function LinkPreview({ url }: { url: string }) {
     );
   }
 
-  if (error || !data) {
-    return null; // Don't show anything if we can't get a preview
-  }
+  if (error || !data) return null;
 
   return (
     <a
@@ -67,14 +154,11 @@ export function LinkPreview({ url }: { url: string }) {
     >
       {data.image && (
         <div className="w-full aspect-[1.91/1] overflow-hidden bg-slate-100 dark:bg-slate-900">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={data.image}
             alt={data.title || "Preview"}
             className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = "none";
-            }}
+            onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
           />
         </div>
       )}
