@@ -5,6 +5,14 @@ import { Link2 } from "lucide-react";
 
 // ─── Embed detection ──────────────────────────────────────────────────────────
 
+function isDirectVideoUrl(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    return /\.(mp4|webm|mov|ogg)(\?.*)?$/.test(path);
+  } catch {}
+  return false;
+}
+
 function getYouTubeId(url: string): string | null {
   try {
     const u = new URL(url);
@@ -54,6 +62,21 @@ export function LinkPreview({ url }: { url: string }) {
   const youtubeId = getYouTubeId(url);
   const vimeoId = getVimeoId(url);
   const spotifyEmbed = getSpotifyEmbed(url);
+
+  // ── Direct video file ──────────────────────────────────────────────────────
+  if (isDirectVideoUrl(url)) {
+    return (
+      <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-black">
+        <video
+          src={url}
+          controls
+          playsInline
+          className="w-full max-h-[480px]"
+          preload="metadata"
+        />
+      </div>
+    );
+  }
 
   // ── YouTube embed ──────────────────────────────────────────────────────────
   if (youtubeId) {
