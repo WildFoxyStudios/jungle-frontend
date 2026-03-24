@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { getProxyUrl } from "@/lib/media-proxy";
 
 interface AvatarProps {
   src?: string | null;
@@ -36,7 +37,13 @@ export function Avatar({ src, alt, size = "md", online, className, onClick, fall
         onClick={onClick}
       >
         {src ? (
-          <Image src={src} alt={alt ?? ""} fill className="object-cover" sizes="112px" />
+          <Image
+            src={getProxyUrl(src)}
+            alt={alt}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 32px, 44px"
+          />
         ) : (
           <Image src="/user.svg" alt="Usuario" fill className="object-cover p-2" sizes="112px" />
         )}

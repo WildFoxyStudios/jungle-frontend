@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { storiesApi } from "@/lib/api-stories";
 import { uploadApi } from "@/lib/api-upload";
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useApi } from "@/hooks/useApi";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { getProxyUrl } from "@/lib/media-proxy";
 import type { Story } from "@/lib/types";
 
 export function StoriesBar() {
@@ -141,10 +141,10 @@ export function StoriesBar() {
               className="shrink-0 w-[110px] h-[180px] rounded-2xl overflow-hidden relative group focus:outline-none"
             >
               {story.media_type === "video" ? (
-                <video src={story.media_url} className="w-full h-full object-cover" />
+                <video src={getProxyUrl(story.media_url)} className="w-full h-full object-cover" />
               ) : story.media_url ? (
                 <Image
-                  src={story.media_url}
+                  src={getProxyUrl(story.media_url)}
                   alt={story.user_name ?? ""}
                   fill
                   className="object-cover"

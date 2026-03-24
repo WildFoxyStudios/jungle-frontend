@@ -30,6 +30,7 @@ import { CommentSection } from "./comment-section";
 import { LinkPreview } from "./link-preview";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { getProxyUrl } from "@/lib/media-proxy";
 import type { Post } from "@/lib/types";
 
 interface PostCardProps {
@@ -283,14 +284,14 @@ export function PostCard({ post, onDelete, onUpdate, showGroupLink }: PostCardPr
             >
               {url.match(/\.(mp4|webm|mov)$/i) ? (
                 <video
-                  src={url}
+                  src={getProxyUrl(url)}
                   className="w-full h-full object-cover"
                   controls
                   playsInline
                 />
               ) : (
                 <img
-                  src={url}
+                  src={getProxyUrl(url)}
                   alt={`Media ${i + 1}`}
                   className="w-full h-full object-cover"
                   loading="lazy"

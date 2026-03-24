@@ -35,8 +35,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getProxyUrl } from "@/lib/media-proxy";
 import type { Page, PagePost } from "@/lib/types";
 import type { UpdatePagePayload, PageInsights, ReviewPagePayload } from "@/lib/api-pages";
 
@@ -525,7 +526,7 @@ function PagePostCard({
               )}
             >
               <img
-                src={url}
+                src={getProxyUrl(url)}
                 alt=""
                 className="w-full h-full object-cover"
                 loading="lazy"

@@ -34,6 +34,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { getProxyUrl } from "@/lib/media-proxy";
 import type { Post, Collection } from "@/lib/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -504,13 +505,13 @@ function SavedPostGrid({
           <div className="relative aspect-square bg-slate-100 dark:bg-gray-800 overflow-hidden">
             {firstMedia.match(/\.(mp4|webm|mov)$/i) ? (
               <video
-                src={firstMedia}
+                src={getProxyUrl(firstMedia)}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 muted
               />
             ) : (
               <img
-                src={firstMedia}
+                src={getProxyUrl(firstMedia)}
                 alt={post.content ?? ""}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
