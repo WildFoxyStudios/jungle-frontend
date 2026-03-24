@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
         hostname: "*.fly.dev",
         pathname: "/**",
       },
+      // Tigris storage (Fly.io S3-compatible)
+      {
+        protocol: "https",
+        hostname: "*.fly.storage.tigris.dev",
+        pathname: "/**",
+      },
       // AWS S3 / CloudFront (file uploads)
       {
         protocol: "https",
