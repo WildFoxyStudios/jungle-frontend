@@ -39,7 +39,7 @@ export function Avatar({ src, alt, size = "md", online, className, onClick, fall
         {src ? (
           <Image
             src={getProxyUrl(src)}
-            alt={alt}
+            alt={alt ?? ""}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 32px, 44px"

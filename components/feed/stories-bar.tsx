@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getProxyUrl } from "@/lib/media-proxy";
 import type { Story } from "@/lib/types";
+import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 
 export function StoriesBar() {
   const { user } = useAuth();
