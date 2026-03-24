@@ -61,7 +61,7 @@ export function Navbar() {
   // Fetch search results — no synchronous setState in effect body
   useEffect(() => {
     if (!debouncedQuery.trim()) return;
-    setSearching(true);
+    queueMicrotask(() => setSearching(true));
     searchApi
       .search({ q: debouncedQuery, limit: 5 })
       .then((r) => setResults(r))

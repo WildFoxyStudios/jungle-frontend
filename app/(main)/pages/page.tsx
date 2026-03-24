@@ -537,6 +537,7 @@ function CreatePageModal({
       await pagesApi.create({
         ...form,
         name: form.name.trim(),
+        category: form.category || "other",
         username: form.username?.trim() || undefined,
         description: form.description?.trim() || undefined,
       });

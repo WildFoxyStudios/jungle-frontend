@@ -154,7 +154,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   );
 
   // ── Connect / reconnect logic ────────────────────────────────────────────
-  const connect = useCallback(() => {
+  const connect = useCallback(function connectWs() {
     const token = tokenStorage.get();
     if (!token || !isMounted.current) return;
 
@@ -255,7 +255,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           const delay =
             BASE_RECONNECT_DELAY_MS *
             Math.pow(2, reconnectAttempts.current - 1);
-          reconnectTimer.current = setTimeout(connect, delay);
+          reconnectTimer.current = setTimeout(connectWs, delay);
         }
       };
     } catch {

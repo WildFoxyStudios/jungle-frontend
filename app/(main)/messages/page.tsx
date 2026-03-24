@@ -376,7 +376,7 @@ function ChatWindow({
     conversationsApi
       .getMessages(conv.id)
       .then((msgs) => {
-        setMessages(msgs);
+        setMessages(Array.isArray(msgs) ? msgs : []);
       })
       .catch(() => toast.error("Error al cargar mensajes"))
       .finally(() => setLoadingMsgs(false));

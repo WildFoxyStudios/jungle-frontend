@@ -3,6 +3,7 @@ import type {
   MarketplaceProduct,
   MarketplaceOffer,
   MarketplaceCategory,
+  ProductCondition,
 } from "./types";
 
 // ─── Request payloads ─────────────────────────────────────────────────────────
@@ -10,16 +11,16 @@ import type {
 export interface CreateProductPayload {
   category_id?: string;
   title: string;
-  description?: string;
+  description: string;
   price: number;
   currency?: string;
-  condition: "new" | "used_like_new" | "used_good" | "used_fair";
+  condition: ProductCondition;
   location?: string;
   images?: string[];
   stock?: number;
 }
 
-export interface UpdateProductPayload extends Partial<CreateProductPayload> {}
+export type UpdateProductPayload = Partial<CreateProductPayload>;
 
 export interface MakeOfferPayload {
   offered_price: number;

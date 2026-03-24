@@ -29,29 +29,37 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import type { MarketplaceProduct, MarketplaceCategory } from "@/lib/types";
+import type {
+  MarketplaceProduct,
+  MarketplaceCategory,
+  ProductCondition,
+} from "@/lib/types";
 
 // ─── Condition labels ─────────────────────────────────────────────────────────
 
-const CONDITIONS: Record<string, { label: string; color: string }> = {
+const CONDITIONS: Record<ProductCondition, { label: string; color: string }> = {
   new: {
     label: "Nuevo",
     color:
       "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
   },
-  used_like_new: {
+  like_new: {
     label: "Como nuevo",
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
   },
-  used_good: {
+  good: {
     label: "Buen estado",
     color:
       "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   },
-  used_fair: {
+  fair: {
     label: "Estado regular",
     color:
       "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  },
+  poor: {
+    label: "Estado pobre",
+    color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
   },
 };
 
@@ -68,7 +76,7 @@ const SORT_OPTIONS = [
 
 interface Filters {
   category_id?: string;
-  condition?: string;
+  condition?: ProductCondition;
   min_price?: number;
   max_price?: number;
   sort: string;
@@ -134,7 +142,11 @@ export default function MarketplacePage() {
     const isSaved = saved.has(id);
     setSaved((prev) => {
       const next = new Set(prev);
-      isSaved ? next.delete(id) : next.add(id);
+      if (isSaved) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
     if (!isSaved) {
@@ -669,7 +681,8 @@ function FiltersModal({
             Condición
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(CONDITIONS).map(([value, { label, color }]) => (
+            {(Object.entries(CONDITIONS) as [ProductCondition, { label: string; color: string }][])
+              .map(([value, { label, color }]) => (
               <button
                 key={value}
                 onClick={() =>
@@ -772,14 +785,14 @@ function CreateListingModal({
     title: "",
     description: "",
     price: "",
-    condition: "new" as keyof typeof CONDITIONS,
+    condition: "new" as ProductCondition,
     category_id: "",
     location: "",
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const set = (key: keyof typeof form, value: string) =>
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleImages = (files: FileList | null) => {
@@ -800,16 +813,15 @@ function CreateListingModal({
   };
 
   const handleCreate = async () => {
-    if (!form.title.trim() || !form.price) return;
+    if (!form.title.trim() || !form.price || form.description.trim().length < 10)
+      return;
     setSaving(true);
     try {
-      // In production: upload images first via uploadApi.uploadPostMedia(imageFiles)
-      // then pass the resulting URLs to create.
       await marketplaceApi.createProduct({
         title: form.title.trim(),
-        description: form.description || undefined,
+        description: form.description.trim(),
         price: parseFloat(form.price),
-        condition: form.condition as any,
+        condition: form.condition,
         category_id: form.category_id || undefined,
         location: form.location || undefined,
         images: imagePreviews.length > 0 ? imagePreviews : undefined,
@@ -822,7 +834,11 @@ function CreateListingModal({
     }
   };
 
-  const isValid = form.title.trim() && form.price && parseFloat(form.price) > 0;
+  const isValid =
+    form.title.trim() &&
+    form.price &&
+    parseFloat(form.price) > 0 &&
+    form.description.trim().length >= 10;
 
   return (
     <Modal
@@ -951,10 +967,11 @@ function CreateListingModal({
             </label>
             <select
               value={form.condition}
-              onChange={(e) => set("condition", e.target.value)}
+              onChange={(e) => set("condition", e.target.value as ProductCondition)}
               className="input-base cursor-pointer"
             >
-              {Object.entries(CONDITIONS).map(([v, { label }]) => (
+              {(Object.entries(CONDITIONS) as [ProductCondition, { label: string; color: string }][])
+                .map(([v, { label }]) => (
                 <option key={v} value={v}>
                   {label}
                 </option>

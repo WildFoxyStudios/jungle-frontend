@@ -82,11 +82,11 @@ export default function SearchPage() {
   // ── Search ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!debouncedQuery.trim()) {
-      setResults(null);
+      queueMicrotask(() => setResults(null));
       return;
     }
 
-    setSearching(true);
+    queueMicrotask(() => setSearching(true));
     const searchType = activeTab === "all" ? undefined : activeTab;
 
     searchApi

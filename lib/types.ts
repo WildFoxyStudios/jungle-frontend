@@ -542,10 +542,11 @@ export interface EventAttendee {
 
 export type ProductCondition =
   | "new"
-  | "used_like_new"
-  | "used_good"
-  | "used_fair";
-export type ProductStatus = "available" | "pending" | "sold";
+  | "like_new"
+  | "good"
+  | "fair"
+  | "poor";
+export type ProductStatus = "available" | "pending" | "sold" | "deleted";
 
 export interface MarketplaceProduct {
   id: string;
@@ -575,7 +576,7 @@ export interface MarketplaceOffer {
   seller_id: string;
   offered_price: number;
   message?: string;
-  status: "pending" | "accepted" | "rejected" | "countered";
+  status: "pending" | "accepted" | "rejected" | "withdrawn";
   created_at: string;
 }
 

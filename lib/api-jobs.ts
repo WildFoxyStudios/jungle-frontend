@@ -24,7 +24,7 @@ export interface CreateJobPayload {
   page_id?: string;
 }
 
-export interface UpdateJobPayload extends Partial<CreateJobPayload> {}
+export type UpdateJobPayload = Partial<CreateJobPayload>;
 
 export interface ApplyJobPayload {
   cover_letter?: string;

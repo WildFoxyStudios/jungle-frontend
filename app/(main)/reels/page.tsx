@@ -244,8 +244,10 @@ function ReelItem({
     } else {
       video.pause();
       video.currentTime = 0;
-      setPlaying(false);
-      setProgress(0);
+      queueMicrotask(() => {
+        setPlaying(false);
+        setProgress(0);
+      });
     }
   }, [isActive, reel.id]);
 
