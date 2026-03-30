@@ -94,6 +94,14 @@ export const watchApi = {
   commentOnVideo: (videoId: string, payload: CommentOnVideoPayload) =>
     api.post(`/watch/${videoId}/comment`, payload).then((r) => r.data),
 
+  /** GET /watch/saved – videos the user has saved */
+  getSavedVideos: (params?: { limit?: number; offset?: number }) =>
+    api.get<WatchVideo[]>("/watch/saved", { params }).then((r) => r.data),
+
+  /** GET /watch/:id/comments – comments on a video */
+  getVideoComments: (videoId: string, params?: { limit?: number; offset?: number }) =>
+    api.get<any[]>(`/watch/${videoId}/comments`, { params }).then((r) => r.data),
+
   /** POST /watch/:id/save */
   saveVideo: (videoId: string) =>
     api.post(`/watch/${videoId}/save`).then((r) => r.data),

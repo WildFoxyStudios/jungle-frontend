@@ -831,7 +831,7 @@ function EditPageModal({
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Acerca de</label>
           <textarea className="input-base resize-none" rows={3} value={form.about} onChange={(e) => set("about", e.target.value)} maxLength={2000} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Sitio web</label>
             <input className="input-base" type="url" placeholder="https://..." value={form.website} onChange={(e) => set("website", e.target.value)} />

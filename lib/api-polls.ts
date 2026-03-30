@@ -29,6 +29,13 @@ export const pollsApi = {
       .then((r) => r.data),
 
   /**
+   * GET /posts/:postId/poll
+   * Fetch the poll attached to a post (by post ID).
+   */
+  getPostPoll: (postId: string) =>
+    api.get<PollWithOptions>(`/posts/${postId}/poll`).then((r) => r.data),
+
+  /**
    * GET /polls/:id
    * Fetch poll details including per-option vote counts and the caller's
    * current votes.

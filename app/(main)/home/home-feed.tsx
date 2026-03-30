@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { SidebarRight } from "@/components/layout/sidebar-right";
 import { CreatePost } from "@/components/feed/create-post";
 import { PostCard } from "@/components/feed/post-card";
@@ -12,11 +12,28 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { postsApi } from "@/lib/api-posts";
 import { useInfiniteApi } from "@/hooks/useApi";
 import { Rss, RefreshCw } from "lucide-react";
-import type { Post } from "@/lib/types";
+import type { Post, PostWithDetails } from "@/lib/types";
+
+/** Flatten PostWithDetails into a Post with user info populated */
+function flattenPost(pwd: PostWithDetails): Post {
+  const p = pwd.post;
+  return {
+    ...p,
+    user_name: pwd.author.full_name || pwd.author.username,
+    user_profile_picture: pwd.author.profile_picture_url,
+    is_purchased: pwd.is_purchased,
+    is_subscribed: pwd.is_subscribed,
+  };
+}
+
+interface FeedPostMeta {
+  my_reaction?: string;
+  is_saved: boolean;
+}
 
 export function HomeFeed() {
   const {
-    items: posts,
+    items: rawPosts,
     loading,
     loadingMore,
     hasMore,
@@ -29,6 +46,8 @@ export function HomeFeed() {
   );
 
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
+  // Track updates to feed posts (e.g., poll votes) without refetching
+  const [postUpdates, setPostUpdates] = useState<Record<string, Post>>({});
 
   const sentinelRef = useInfiniteScroll({
     onLoadMore: loadMore,
@@ -36,18 +55,53 @@ export function HomeFeed() {
     loading: loadingMore,
   });
 
-  const allPosts = [...localPosts, ...posts];
+  // Transform PostWithDetails to flat Posts and extract metadata
+  const feedData = useMemo(() => {
+    const posts: Post[] = [];
+    const meta: Record<string, FeedPostMeta> = {};
+
+    for (const raw of rawPosts) {
+      // Handle both PostWithDetails (has .post) and plain Post (legacy)
+      const isDetailed = raw && typeof raw === "object" && "post" in raw && "author" in raw;
+      if (isDetailed) {
+        const pwd = raw as PostWithDetails;
+        const flat = flattenPost(pwd);
+        posts.push(flat);
+        meta[flat.id] = {
+          my_reaction: pwd.my_reaction ?? undefined,
+          is_saved: pwd.is_saved,
+        };
+      } else {
+        // Legacy: already flat
+        const p = raw as unknown as Post;
+        posts.push(p);
+        meta[p.id] = { is_saved: false };
+      }
+    }
+
+    return { posts, meta };
+  }, [rawPosts]);
+
+  const allPosts = [...localPosts, ...feedData.posts].map(
+    p => postUpdates[p.id] || p
+  );
 
   const handleDelete = useCallback((id: string) => {
     setLocalPosts(prev => prev.filter(p => p.id !== id));
   }, []);
 
+  const handleUpdate = useCallback((post: Post) => {
+    setLocalPosts(prev => prev.map(p => p.id === post.id ? post : p));
+    // Also track updates for feed posts (poll votes, etc.)
+    setPostUpdates(prev => ({ ...prev, [post.id]: post }));
+  }, []);
+
   return (
-    <div className="flex gap-5 p-4 lg:p-6 max-w-[1200px] mx-auto">
+    <div className="flex gap-3 sm:gap-5 p-2 sm:p-4 lg:p-6 max-w-[1200px] mx-auto">
       {/* Main column */}
-      <div className="flex-1 min-w-0 space-y-4">
+      <div className="flex-1 min-w-0 space-y-3 sm:space-y-4">
         {/* Stories */}
-        <div className="surface p-4">
+        <div className="surface p-3 sm:p-4">
           <StoriesBar />
         </div>
 
@@ -77,14 +131,20 @@ export function HomeFeed() {
         )}
 
         {/* Posts */}
-        {allPosts.map((post, i) => (
-          <div key={post.id} className={`stagger-${Math.min((i % 5) + 1, 5)}`}>
-            <PostCard
-              post={post}
-              onDelete={handleDelete}
-            />
-          </div>
-        ))}
+        {allPosts.map((post, i) => {
+          const meta = feedData.meta[post.id];
+          return (
+            <div key={post.id} className={`stagger-${Math.min((i % 5) + 1, 5)}`}>
+              <PostCard
+                post={post}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+                initialReaction={meta?.my_reaction}
+                initialSaved={meta?.is_saved}
+              />
+            </div>
+          );
+        })}
 
         {/* Load more skeletons */}
         {loadingMore && (
@@ -99,7 +159,7 @@ export function HomeFeed() {
 
         {/* End of feed */}
         {!hasMore && allPosts.length > 0 && (
-          <p className="text-center text-sm text-slate-400 py-4">
+          <p className="text-center text-sm text-[#65676b] dark:text-[#b0b3b8] py-4">
             Has llegado al final del feed 🎉
           </p>
         )}

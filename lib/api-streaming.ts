@@ -8,6 +8,9 @@ export interface CreateStreamPayload {
   description?: string;
   thumbnail_url?: string;
   scheduled_start?: string;
+  is_paid?: boolean;
+  stream_price?: number;
+  is_subscribers_only?: boolean;
 }
 
 export interface CommentOnStreamPayload {
@@ -59,15 +62,15 @@ export const streamingApi = {
   // ── Comments ──────────────────────────────────────────────────────────────
 
   /** GET /streams/:id/comments */
-  getComments: (streamId: string) =>
+  getStreamComments: (streamId: string) =>
     api
-      .get<StreamComment[]>(`/streams/${streamId}/comments`)
+      .get<{ comments: StreamComment[] }>(`/streams/${streamId}/comments`)
       .then((r) => r.data),
 
   /** POST /streams/:id/comments */
-  comment: (streamId: string, payload: CommentOnStreamPayload) =>
+  commentOnStream: (streamId: string, content: string) =>
     api
-      .post<StreamComment>(`/streams/${streamId}/comments`, payload)
+      .post<StreamComment>(`/streams/${streamId}/comments`, { content })
       .then((r) => r.data),
 
   // ── Reactions ─────────────────────────────────────────────────────────────
@@ -76,6 +79,12 @@ export const streamingApi = {
   getReactions: (streamId: string) =>
     api
       .get<StreamReactionCount[]>(`/streams/${streamId}/reactions`)
+      .then((r) => r.data),
+
+  /** POST /streams/:id/reactions */
+  reactToStream: (streamId: string, reactionType: string) =>
+    api
+      .post(`/streams/${streamId}/reactions`, { reaction_type: reactionType })
       .then((r) => r.data),
 
   /** POST /streams/:id/reactions */

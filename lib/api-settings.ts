@@ -17,6 +17,7 @@ export interface UpdateSettingsPayload {
   email_notifications?: boolean;
   push_notifications?: boolean;
   sms_notifications?: boolean;
+  login_alerts?: boolean;
   theme?: string;
   language?: string;
   timezone?: string;

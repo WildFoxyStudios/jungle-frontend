@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, CheckCheck, Trash2, Settings, Filter } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Settings } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -9,11 +9,12 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/tabs";
+
 import { EmptyState } from "@/components/ui/empty-state";
 import { NotificationSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { RichContent } from "@/components/ui/rich-content";
 import type { Notification } from "@/lib/types";
 
 // ─── Notification type config ─────────────────────────────────────────────────
@@ -181,7 +182,6 @@ export default function NotificationsPage() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    refresh,
   } = useNotifications();
 
   const toast = useToast();
@@ -246,7 +246,8 @@ export default function NotificationsPage() {
               leftIcon={<CheckCheck size={15} />}
               onClick={handleMarkAllRead}
             >
-              Marcar todas leídas
+              <span className="hidden sm:inline">Marcar todas leídas</span>
+              <span className="sm:hidden">Leer todas</span>
             </Button>
           )}
           <Link href="/settings">
@@ -425,7 +426,7 @@ function NotificationItem({
           {n.actor_name && (
             <span className="font-bold hover:underline">{n.actor_name} </span>
           )}
-          {n.message ?? n.notification_type}
+          <RichContent content={n.message ?? n.notification_type} />
         </p>
         <div className="flex items-center gap-2 mt-1">
           <span

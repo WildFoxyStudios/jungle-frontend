@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,6 +17,11 @@ import {
   SlidersHorizontal,
   UserPlus,
   UserCheck,
+  Hash,
+  ChevronDown,
+  Info,
+  Lock,
+  Shield,
 } from "lucide-react";
 import { searchApi } from "@/lib/api-search";
 import { friendsApi } from "@/lib/api-friends";
@@ -67,6 +72,14 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false);
 
+  // ── Filters ─────────────────────────────────────────────────────────────
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState<"relevance" | "date" | "popularity">("relevance");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
   const debouncedQuery = useDebounce(query, 350);
 
   // ── Trending & history ────────────────────────────────────────────────────
@@ -79,6 +92,12 @@ export default function SearchPage() {
     [],
   );
 
+  // ── Detect hashtag/mention queries ──────────────────────────────────────
+  const isHashtagSearch = debouncedQuery.trim().startsWith("#");
+  const isMentionSearch = debouncedQuery.trim().startsWith("@");
+  const hashtagName = isHashtagSearch ? debouncedQuery.trim().slice(1) : "";
+  const mentionName = isMentionSearch ? debouncedQuery.trim().slice(1) : "";
+
   // ── Search ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!debouncedQuery.trim()) {
@@ -90,26 +109,43 @@ export default function SearchPage() {
     const searchType = activeTab === "all" ? undefined : activeTab;
 
     searchApi
-      .search({ q: debouncedQuery, search_type: searchType as any, limit: 20 })
+      .search({
+        q: debouncedQuery,
+        search_type: searchType as any,
+        limit: 20,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        sort_by: sortBy !== "relevance" ? sortBy : undefined,
+        min_price: minPrice ? Number(minPrice) : undefined,
+        max_price: maxPrice ? Number(maxPrice) : undefined,
+      })
       .then((r) => {
         setResults(r);
-        // Update URL
         const params = new URLSearchParams({ q: debouncedQuery });
         router.replace(`/search?${params.toString()}`, { scroll: false });
-        // Track
         searchApi
           .track({ query: debouncedQuery, search_type: searchType })
           .catch(() => {});
       })
       .catch(() => toast.error("Error al buscar"))
       .finally(() => setSearching(false));
-  }, [debouncedQuery, activeTab]);
+  }, [debouncedQuery, activeTab, dateFrom, dateTo, sortBy, minPrice, maxPrice]);
 
   const handleClearHistory = async () => {
     await searchApi.clearHistory();
     refreshHistory();
     toast.success("Historial borrado");
   };
+
+  const handleClearFilters = () => {
+    setDateFrom("");
+    setDateTo("");
+    setSortBy("relevance");
+    setMinPrice("");
+    setMaxPrice("");
+  };
+
+  const hasActiveFilters = dateFrom || dateTo || sortBy !== "relevance" || minPrice || maxPrice;
 
   const total = results
     ? results.posts.length +
@@ -120,36 +156,198 @@ export default function SearchPage() {
       results.events.length
     : 0;
 
+  // ── Grouped results ordered by count (for "All" tab) ──────────────────
+  const groupedCategories = useMemo(() => {
+    if (!results) return [];
+    const cats: Array<{
+      key: SearchTab;
+      label: string;
+      icon: typeof Search;
+      items: any[];
+    }> = [
+      { key: "people", label: "Personas", icon: Users, items: results.users },
+      { key: "posts", label: "Publicaciones", icon: FileText, items: results.posts },
+      { key: "groups", label: "Grupos", icon: Globe, items: results.groups },
+      { key: "pages", label: "Páginas", icon: Bookmark, items: results.pages },
+      { key: "products", label: "Productos", icon: ShoppingBag, items: results.products },
+      { key: "events", label: "Eventos", icon: Calendar, items: results.events },
+    ];
+    return cats.filter((c) => c.items.length > 0).sort((a, b) => b.items.length - a.items.length);
+  }, [results]);
+
+  // ── Exact mention match ───────────────────────────────────────────────
+  const exactMentionMatch = useMemo(() => {
+    if (!isMentionSearch || !results || !mentionName) return null;
+    return results.users.find(
+      (u) => u.username.toLowerCase() === mentionName.toLowerCase(),
+    ) ?? null;
+  }, [isMentionSearch, results, mentionName]);
+
+  // ── Hashtag stats (from trending if available) ────────────────────────
+  const hashtagStats = useMemo(() => {
+    if (!isHashtagSearch || !hashtagName) return null;
+    const t = trending?.find(
+      (tr) => tr.query.toLowerCase() === `#${hashtagName}`.toLowerCase() ||
+              tr.query.toLowerCase() === hashtagName.toLowerCase(),
+    );
+    return {
+      name: hashtagName,
+      postCount: results?.posts.length ?? 0,
+      dailyCount: t?.daily_count ?? 0,
+      weeklyCount: t?.weekly_count ?? 0,
+    };
+  }, [isHashtagSearch, hashtagName, results, trending]);
+
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-[860px] mx-auto px-4 py-6 pb-24">
       {/* ── Search input ──────────────────────────────────────────────────── */}
-      <div className="relative mb-6">
-        <Search
-          size={20}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-        />
-        <input
-          type="search"
-          placeholder="Buscar personas, grupos, páginas, posts..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoFocus
-          className="w-full pl-12 pr-12 py-3.5 text-base bg-white dark:bg-gray-900 border-2 border-slate-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all shadow-sm placeholder:text-slate-400"
-        />
-        {query && (
+      <div className="relative mb-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search
+              size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <input
+              type="search"
+              placeholder="Buscar personas, grupos, páginas, posts..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+              className="w-full pl-12 pr-12 py-3.5 text-base bg-white dark:bg-gray-900 border-2 border-slate-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all shadow-sm placeholder:text-slate-400"
+            />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  setResults(null);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
           <button
-            onClick={() => {
-              setQuery("");
-              setResults(null);
-            }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            onClick={() => setShowFilters((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2 rounded-2xl border-2 text-sm font-medium transition-all shrink-0",
+              showFilters || hasActiveFilters
+                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
+                : "border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-slate-600 dark:text-slate-300 hover:border-slate-300",
+            )}
           >
-            <X size={18} />
+            <SlidersHorizontal size={16} />
+            <span className="hidden sm:inline">Filtros</span>
+            {hasActiveFilters && (
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            )}
           </button>
-        )}
+        </div>
       </div>
+
+      {/* ── Filter panel ──────────────────────────────────────────────────── */}
+      {showFilters && (
+        <div className="surface p-4 mb-4 animate-fade-in">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              Filtros de búsqueda
+            </h3>
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Date from */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Desde
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+            {/* Date to */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Hasta
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+            {/* Sort */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Ordenar por
+              </label>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-indigo-400 appearance-none pr-8"
+                >
+                  <option value="relevance">Relevancia</option>
+                  <option value="date">Fecha</option>
+                  <option value="popularity">Popularidad</option>
+                </select>
+                <ChevronDown
+                  size={14}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                />
+              </div>
+            </div>
+            {/* Price range */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Rango de precio
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  min={0}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-indigo-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  min={0}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Fuzzy results banner ──────────────────────────────────────────── */}
+      {results?.is_fuzzy && query.trim() && (
+        <div className="flex items-center gap-2 px-4 py-2.5 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-700 dark:text-amber-300">
+          <Info size={16} className="shrink-0" />
+          <span>
+            Mostrando resultados aproximados para{" "}
+            <span className="font-semibold">&ldquo;{query}&rdquo;</span>
+          </span>
+        </div>
+      )}
 
       {/* ── No query: trending + history ──────────────────────────────────── */}
       {!query.trim() && (
@@ -230,9 +428,7 @@ export default function SearchPage() {
                 ({ value, label, icon: Icon }) => (
                   <button
                     key={value}
-                    onClick={() => {
-                      setActiveTab(value);
-                    }}
+                    onClick={() => setActiveTab(value)}
                     className="surface p-4 flex items-center gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all group"
                   >
                     <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
@@ -255,6 +451,66 @@ export default function SearchPage() {
       {/* ── Results ───────────────────────────────────────────────────────── */}
       {query.trim() && (
         <div className="animate-fade-in">
+          {/* Hashtag header (8.4) */}
+          {isHashtagSearch && hashtagStats && !searching && results && (
+            <div className="surface p-4 mb-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                <Hash size={28} className="text-indigo-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">
+                  #{hashtagStats.name}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {hashtagStats.postCount} publicaciones
+                  {hashtagStats.dailyCount > 0 && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+                      <TrendingUp size={12} />
+                      {hashtagStats.dailyCount} hoy
+                    </span>
+                  )}
+                  {hashtagStats.weeklyCount > 0 && (
+                    <span className="ml-2 text-slate-400">
+                      · {hashtagStats.weeklyCount} esta semana
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Mention exact match card (8.4) */}
+          {isMentionSearch && exactMentionMatch && !searching && (
+            <div className="surface p-5 mb-4 flex items-center gap-4">
+              <Link href={`/profile/${exactMentionMatch.id}`} className="shrink-0">
+                <Avatar
+                  src={exactMentionMatch.profile_picture}
+                  alt={exactMentionMatch.full_name}
+                  size="lg"
+                  fallbackName={exactMentionMatch.full_name}
+                />
+              </Link>
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={`/profile/${exactMentionMatch.id}`}
+                  className="text-lg font-bold text-slate-900 dark:text-slate-50 hover:underline block truncate"
+                >
+                  {exactMentionMatch.full_name}
+                </Link>
+                <p className="text-sm text-slate-500">
+                  @{exactMentionMatch.username}
+                  {exactMentionMatch.bio && ` · ${exactMentionMatch.bio}`}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => router.push(`/profile/${exactMentionMatch.id}`)}
+              >
+                Ver perfil
+              </Button>
+            </div>
+          )}
+
           {/* Result count */}
           {!searching && results && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
@@ -263,7 +519,7 @@ export default function SearchPage() {
                 : `${total} resultado${total !== 1 ? "s" : ""} para `}
               {total > 0 && (
                 <span className="font-semibold text-slate-800 dark:text-slate-100">
-                  "{query}"
+                  &ldquo;{query}&rdquo;
                 </span>
               )}
             </p>
@@ -271,7 +527,7 @@ export default function SearchPage() {
 
           {/* Tabs */}
           <Tabs
-            defaultTab="all"
+            value={activeTab}
             onChange={(tab) => setActiveTab(tab as SearchTab)}
           >
             <div className="surface mb-4 overflow-x-auto no-scrollbar">
@@ -330,95 +586,64 @@ export default function SearchPage() {
             {/* Results panels */}
             {!searching && results && (
               <>
-                {/* All */}
+                {/* All — grouped by category, ordered by count, max 3 per category */}
                 <TabPanel value="all">
                   {total === 0 ? (
                     <NoResults query={query} />
                   ) : (
                     <div className="space-y-6">
-                      {results.users.length > 0 && (
+                      {groupedCategories.map(({ key, label, icon: Icon, items }) => (
                         <Section
-                          title="Personas"
-                          icon={<Users size={16} />}
-                          seeAll={() => setActiveTab("people")}
+                          key={key}
+                          title={label}
+                          icon={<Icon size={16} />}
+                          seeAll={() => setActiveTab(key)}
+                          count={items.length}
                         >
-                          <div className="space-y-2">
-                            {results.users.slice(0, 3).map((u) => (
-                              <PeopleResult key={u.id} user={u} />
-                            ))}
-                          </div>
+                          {key === "people" && (
+                            <div className="space-y-2">
+                              {(items as SearchUser[]).slice(0, 3).map((u) => (
+                                <PeopleResult key={u.id} user={u} />
+                              ))}
+                            </div>
+                          )}
+                          {key === "posts" && (
+                            <div className="space-y-2">
+                              {(items as SearchPost[]).slice(0, 3).map((p) => (
+                                <PostResult key={p.id} post={p} />
+                              ))}
+                            </div>
+                          )}
+                          {key === "groups" && (
+                            <div className="space-y-2">
+                              {(items as SearchGroup[]).slice(0, 3).map((g) => (
+                                <GroupResult key={g.id} group={g} />
+                              ))}
+                            </div>
+                          )}
+                          {key === "pages" && (
+                            <div className="space-y-2">
+                              {(items as SearchPage[]).slice(0, 3).map((p) => (
+                                <PageResult key={p.id} page={p} />
+                              ))}
+                            </div>
+                          )}
+                          {key === "products" && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {(items as SearchProduct[]).slice(0, 3).map((p) => (
+                                <ProductResult key={p.id} product={p} />
+                              ))}
+                            </div>
+                          )}
+                          {key === "events" && (
+                            <div className="space-y-2">
+                              {(items as SearchEvent[]).slice(0, 3).map((e) => (
+                                <EventResult key={e.id} event={e} />
+                              ))}
+                            </div>
+                          )}
                         </Section>
-                      )}
-
-                      {results.posts.length > 0 && (
-                        <Section
-                          title="Publicaciones"
-                          icon={<FileText size={16} />}
-                          seeAll={() => setActiveTab("posts")}
-                        >
-                          <div className="space-y-2">
-                            {results.posts.slice(0, 3).map((p) => (
-                              <PostResult key={p.id} post={p} />
-                            ))}
-                          </div>
-                        </Section>
-                      )}
-
-                      {results.groups.length > 0 && (
-                        <Section
-                          title="Grupos"
-                          icon={<Globe size={16} />}
-                          seeAll={() => setActiveTab("groups")}
-                        >
-                          <div className="space-y-2">
-                            {results.groups.slice(0, 3).map((g) => (
-                              <GroupResult key={g.id} group={g} />
-                            ))}
-                          </div>
-                        </Section>
-                      )}
-
-                      {results.pages.length > 0 && (
-                        <Section
-                          title="Páginas"
-                          icon={<Bookmark size={16} />}
-                          seeAll={() => setActiveTab("pages")}
-                        >
-                          <div className="space-y-2">
-                            {results.pages.slice(0, 3).map((p) => (
-                              <PageResult key={p.id} page={p} />
-                            ))}
-                          </div>
-                        </Section>
-                      )}
-
-                      {results.products.length > 0 && (
-                        <Section
-                          title="Productos"
-                          icon={<ShoppingBag size={16} />}
-                          seeAll={() => setActiveTab("products")}
-                        >
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {results.products.slice(0, 3).map((p) => (
-                              <ProductResult key={p.id} product={p} />
-                            ))}
-                          </div>
-                        </Section>
-                      )}
-
-                      {results.events.length > 0 && (
-                        <Section
-                          title="Eventos"
-                          icon={<Calendar size={16} />}
-                          seeAll={() => setActiveTab("events")}
-                        >
-                          <div className="space-y-2">
-                            {results.events.slice(0, 3).map((e) => (
-                              <EventResult key={e.id} event={e} />
-                            ))}
-                          </div>
-                        </Section>
-                      )}
+                      ))}
                     </div>
                   )}
                 </TabPanel>
@@ -515,11 +740,13 @@ function Section({
   title,
   icon,
   seeAll,
+  count,
   children,
 }: {
   title: string;
   icon: React.ReactNode;
   seeAll?: () => void;
+  count?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -528,6 +755,9 @@ function Section({
         <h2 className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <span className="text-indigo-500">{icon}</span>
           {title}
+          {count !== undefined && count > 3 && (
+            <span className="text-xs font-normal text-slate-400">({count})</span>
+          )}
         </h2>
         {seeAll && (
           <button
@@ -652,6 +882,13 @@ function GroupResult({ group, card }: { group: SearchGroup; card?: boolean }) {
   const toast = useToast();
   const [joined, setJoined] = useState(false);
 
+  const privacyIcon =
+    group.privacy === "private" ? (
+      <Lock size={10} />
+    ) : group.privacy === "secret" ? (
+      <Shield size={10} />
+    ) : null;
+
   if (card) {
     return (
       <div className="surface p-4 flex flex-col gap-3 animate-fade-in-up">
@@ -660,14 +897,22 @@ function GroupResult({ group, card }: { group: SearchGroup; card?: boolean }) {
             <Globe size={24} className="text-white/80" />
           </div>
           <div className="flex-1 min-w-0">
-            <Link
-              href={`/groups/${group.id}`}
-              className="font-semibold text-slate-900 dark:text-slate-50 hover:underline block truncate"
-            >
-              {group.name}
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <Link
+                href={`/groups/${group.id}`}
+                className="font-semibold text-slate-900 dark:text-slate-50 hover:underline block truncate"
+              >
+                {group.name}
+              </Link>
+              {privacyIcon && (
+                <Badge variant="default" size="sm" className="shrink-0">
+                  {privacyIcon}
+                  <span className="ml-0.5 capitalize">{group.privacy}</span>
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {group.member_count.toLocaleString()} miembros · {group.privacy}
+              {group.member_count.toLocaleString()} miembros
             </p>
             {group.description && (
               <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mt-1">
@@ -700,12 +945,24 @@ function GroupResult({ group, card }: { group: SearchGroup; card?: boolean }) {
         <Globe size={18} className="text-white/80" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-slate-900 dark:text-slate-50 truncate">
-          {group.name}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-semibold text-sm text-slate-900 dark:text-slate-50 truncate">
+            {group.name}
+          </p>
+          {privacyIcon && (
+            <Badge variant="default" size="sm" className="shrink-0">
+              {privacyIcon}
+            </Badge>
+          )}
+        </div>
         <p className="text-xs text-slate-500">
-          {group.member_count.toLocaleString()} miembros · {group.privacy}
+          {group.member_count.toLocaleString()} miembros
         </p>
+        {group.description && (
+          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+            {group.description}
+          </p>
+        )}
       </div>
     </Link>
   );

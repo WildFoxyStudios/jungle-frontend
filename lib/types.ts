@@ -37,6 +37,7 @@ export interface User {
   birth_date?: string;
   gender?: string;
   relationship_status?: string;
+  phone_number?: string;
   created_at: string;
 }
 
@@ -174,6 +175,45 @@ export interface Post {
   likes_count?: number;
   created_at: string;
   updated_at: string;
+  is_paid?: boolean;
+  price?: number;
+  is_subscribers_only?: boolean;
+  is_purchased?: boolean;
+  is_subscribed?: boolean;
+  poll?: {
+    id: string;
+    post_id: string;
+    question: string;
+    allows_multiple_answers: boolean;
+    closes_at?: string;
+    total_votes: number;
+    options: Array<{
+      id: string;
+      option_text: string;
+      votes_count: number;
+      percentage: number;
+      option_order: number;
+    }>;
+    user_votes: string[];
+    created_at: string;
+  };
+}
+
+export interface PostWithDetails {
+  post: Post;
+  author: {
+    id: string;
+    username: string;
+    email: string;
+    full_name?: string;
+    profile_picture_url?: string;
+    is_verified: boolean;
+  };
+  my_reaction?: string;
+  reaction_summary: ReactionSummary;
+  is_saved: boolean;
+  is_purchased?: boolean;
+  is_subscribed?: boolean;
 }
 
 export interface CreatePostPayload {
@@ -190,10 +230,19 @@ export interface CreatePostPayload {
   group_id?: string;
   page_id?: string;
   event_id?: string;
+  poll?: {
+    question: string;
+    options: string[];
+    duration_days: number;
+  };
+  is_paid?: boolean;
+  price?: number;
+  is_subscribers_only?: boolean;
 }
 
 export interface UpdatePostPayload {
   content?: string;
+  media_urls?: string[];
   location?: string;
   feeling?: string;
   activity?: string;
@@ -253,8 +302,18 @@ export interface Comment {
   gif_url?: string;
   reactions_count: number;
   replies_count: number;
+  my_reaction?: string;
   created_at: string;
   updated_at: string;
+  // From CommentWithDetails (backend flattened)
+  author?: {
+    id: string;
+    username: string;
+    full_name?: string;
+    profile_picture_url?: string;
+  };
+  comment?: Comment;
+  replies?: Comment[];
 }
 
 export interface CreateCommentPayload {
@@ -648,6 +707,49 @@ export interface SearchResults {
   products: SearchProduct[];
   events: SearchEvent[];
   total: number;
+  is_fuzzy?: boolean;
+}
+
+// ─── Autocomplete ────────────────────────────────────────────────────────────
+
+export interface AutocompleteUser {
+  id: string;
+  username: string;
+  full_name?: string;
+  profile_picture?: string;
+}
+
+export interface AutocompleteHashtag {
+  name: string;
+  usage_count: number;
+}
+
+export interface AutocompletePage {
+  id: string;
+  name: string;
+  category: string;
+  picture_url?: string;
+}
+
+export interface AutocompleteGroup {
+  id: string;
+  name: string;
+  members_count: number;
+  picture_url?: string;
+}
+
+export interface AutocompleteResults {
+  users: AutocompleteUser[];
+  hashtags: AutocompleteHashtag[];
+  pages: AutocompletePage[];
+  groups: AutocompleteGroup[];
+}
+
+export interface SearchHistoryEntry {
+  id: string;
+  query: string;
+  search_type?: string;
+  created_at: string;
 }
 
 export interface SearchPost {
@@ -733,14 +835,13 @@ export interface UserSettings {
 
 export interface LoginSession {
   id: string;
-  user_id: string;
   device_name?: string;
   device_type?: string;
   ip_address?: string;
   user_agent?: string;
   location?: string;
-  is_active: boolean;
-  last_active: string;
+  is_active?: boolean;
+  last_active_at: string;
   created_at: string;
 }
 
@@ -1049,6 +1150,9 @@ export interface JobApplication {
   id: string;
   job_id: string;
   user_id: string;
+  job_title?: string;
+  job_city?: string;
+  job_country?: string;
   cover_letter?: string;
   resume_url?: string;
   status: string;
@@ -1211,6 +1315,10 @@ export interface LiveStream {
   ended_at?: string;
   duration?: number;
   created_at: string;
+  is_paid?: boolean;
+  stream_price?: number;
+  is_subscribers_only?: boolean;
+  total_tips?: number;
 }
 
 export interface StreamComment {

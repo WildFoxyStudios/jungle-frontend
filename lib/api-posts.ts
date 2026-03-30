@@ -1,6 +1,7 @@
 import { api } from "./api";
 import type {
   Post,
+  PostWithDetails,
   CreatePostPayload,
   UpdatePostPayload,
   Comment,
@@ -14,6 +15,7 @@ import type {
 // ─── Re-export types so existing imports don't break ─────────────────────────
 export type {
   Post,
+  PostWithDetails,
   CreatePostPayload,
   UpdatePostPayload,
   Comment,
@@ -49,15 +51,15 @@ export const postsApi = {
     api.post<Post>("/posts", data).then((r) => r.data),
 
   /** GET /posts/feed */
-  getFeed: (limit = 20, offset = 0): Promise<Post[]> =>
+  getFeed: (limit = 20, offset = 0): Promise<PostWithDetails[]> =>
     api
-      .get<Post[]>("/posts/feed", { params: { limit, offset } })
+      .get<PostWithDetails[]>("/posts/feed", { params: { limit, offset } })
       .then((r) => r.data),
 
   /** GET /posts/trending */
-  getTrending: (limit = 20, offset = 0): Promise<Post[]> =>
+  getTrending: (limit = 20, offset = 0): Promise<PostWithDetails[]> =>
     api
-      .get<Post[]>("/posts/trending", { params: { limit, offset } })
+      .get<PostWithDetails[]>("/posts/trending", { params: { limit, offset } })
       .then((r) => r.data),
 
   /** GET /posts/:id */

@@ -32,8 +32,10 @@ function buildFormData(
 
 // Axios doesn't need an explicit Content-Type header for multipart –
 // it sets it automatically with the correct boundary when given a FormData body.
+// We must explicitly unset Content-Type to override the default "application/json"
+// set in the base axios instance.
 const multipartConfig = {
-  headers: { "Content-Type": "multipart/form-data" },
+  headers: { "Content-Type": undefined },
 };
 
 export const uploadApi = {
@@ -85,7 +87,11 @@ export const uploadApi = {
   uploadPostMedia: (files: File | File[]): Promise<UploadResponse[]> => {
     const form = new FormData();
     const arr = Array.isArray(files) ? files : [files];
-    arr.forEach((f) => form.append("post_media", f, f.name));
+    arr.forEach((f) => {
+      // Ensure Blobs from canvas.toBlob() or FFmpeg are proper File objects
+      const file = f instanceof File ? f : new File([f], `media_${Date.now()}.jpg`, { type: (f as Blob).type || "image/jpeg" });
+      form.append("post_media", file, file.name);
+    });
     return api
       .post<UploadResponse[]>("/upload/post", form, multipartConfig)
       .then((r) => r.data);

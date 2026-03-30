@@ -5,23 +5,23 @@ import { ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const REACTIONS = [
-  { type: "like", emoji: "👍", label: "Me gusta", color: "text-blue-600" },
-  { type: "love", emoji: "❤️", label: "Me encanta", color: "text-red-500" },
-  { type: "haha", emoji: "😂", label: "Me divierte", color: "text-amber-500" },
-  { type: "wow", emoji: "😮", label: "Me asombra", color: "text-amber-500" },
-  { type: "sad", emoji: "😢", label: "Me entristece", color: "text-blue-500" },
-  { type: "angry", emoji: "😠", label: "Me enoja", color: "text-orange-600" },
-  { type: "care", emoji: "🤗", label: "Me importa", color: "text-orange-400" },
+  { type: "like", emoji: "👍", label: "Me gusta", color: "text-[#1877f2]" },
+  { type: "love", emoji: "❤️", label: "Me encanta", color: "text-[#f33e58]" },
+  { type: "haha", emoji: "😂", label: "Me divierte", color: "text-[#f7b928]" },
+  { type: "wow", emoji: "😮", label: "Me asombra", color: "text-[#f7b928]" },
+  { type: "sad", emoji: "😢", label: "Me entristece", color: "text-[#f7b928]" },
+  { type: "angry", emoji: "😠", label: "Me enoja", color: "text-[#e9710f]" },
+  { type: "care", emoji: "🤗", label: "Me importa", color: "text-[#f7b928]" },
 ];
 
 const reactionColors: Record<string, string> = {
-  like: "text-blue-600",
-  love: "text-red-500",
-  haha: "text-amber-500",
-  wow: "text-amber-500",
-  sad: "text-blue-500",
-  angry: "text-orange-600",
-  care: "text-orange-400",
+  like: "text-[#1877f2]",
+  love: "text-[#f33e58]",
+  haha: "text-[#f7b928]",
+  wow: "text-[#f7b928]",
+  sad: "text-[#f7b928]",
+  angry: "text-[#e9710f]",
+  care: "text-[#f7b928]",
 };
 
 interface ReactionPickerProps {
@@ -75,37 +75,34 @@ export function ReactionPicker({
   return (
     <div
       ref={containerRef}
-      className="relative inline-flex"
+      className="relative flex-1"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <button
         onClick={handleClick}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-          "hover:bg-slate-100 dark:hover:bg-gray-800",
+          "w-full flex items-center justify-center gap-2 py-2 rounded-lg text-[14px] font-semibold transition-colors",
+          "hover:bg-[#f0f2f5] dark:hover:bg-[#3a3b3c]",
           current
             ? reactionColors[current.type]
-            : "text-slate-500 dark:text-slate-400",
+            : "text-[#65676b] dark:text-[#b0b3b8]",
         )}
       >
         {current ? (
-          <span className="text-base leading-none">{current.emoji}</span>
+          <span className="text-[18px] leading-none animate-[bounce_0.3s_ease-in-out]">{current.emoji}</span>
         ) : (
           <ThumbsUp size={18} />
         )}
-        <span>{current?.label ?? "Me gusta"}</span>
-        {reactionsCount > 0 && (
-          <span className="ml-0.5 text-slate-400">{reactionsCount}</span>
-        )}
+        <span className="hidden sm:inline">{current?.label ?? "Me gusta"}</span>
       </button>
 
       {showPicker && (
         <div
           className={cn(
-            "absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2",
-            "bg-white dark:bg-gray-800 rounded-2xl shadow-2xl",
-            "border border-slate-200 dark:border-slate-700",
+            "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-0.5 px-2 py-1.5",
+            "bg-white dark:bg-[#242526] rounded-full shadow-xl",
+            "border border-[#ced0d4] dark:border-[#3e4042]",
             "animate-fade-in-scale z-50",
           )}
         >
@@ -117,21 +114,19 @@ export function ReactionPicker({
                 setShowPicker(false);
               }}
               className={cn(
-                "reaction-btn group flex flex-col items-center gap-1 p-1 rounded-xl",
-                "hover:bg-slate-100 dark:hover:bg-gray-700",
-                "transition-transform hover:scale-125",
-                `stagger-${i + 1}`,
+                "group flex flex-col items-center p-1 rounded-full",
+                "transition-all duration-200 hover:scale-[1.35] hover:-translate-y-1",
               )}
               title={r.label}
               style={{ animationDelay: `${i * 30}ms` }}
             >
               <span
-                className="text-2xl leading-none animate-reaction-pop"
+                className="text-[28px] sm:text-[32px] leading-none cursor-pointer"
                 style={{ animationDelay: `${i * 30}ms` }}
               >
                 {r.emoji}
               </span>
-              <span className="reaction-label text-[10px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-[#050505] dark:text-[#e4e6eb] bg-[#050505]/80 dark:bg-[#e4e6eb]/90 text-white dark:text-[#050505] px-2 py-0.5 rounded-full absolute -top-7 whitespace-nowrap pointer-events-none">
                 {r.label}
               </span>
             </button>

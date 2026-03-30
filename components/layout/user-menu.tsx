@@ -11,20 +11,33 @@ import {
   Sun,
   UserCircle,
   ChevronDown,
+  Wallet,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { walletApi } from "@/lib/api-wallet";
 
 export function UserMenu() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [balance, setBalance] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof document === "undefined") return "light";
     return document.documentElement.classList.contains("dark") ? "dark" : "light";
   });
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch wallet balance when menu opens
+  useEffect(() => {
+    if (isOpen && user) {
+      walletApi.getBalance()
+        .then(data => setBalance(data.formatted))
+        .catch(() => setBalance(null));
+    }
+  }, [isOpen, user]);
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
@@ -79,7 +92,7 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden z-50 animate-fade-in-down">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-1rem)] sm:w-80 max-w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden z-50 animate-fade-in-down">
           {/* Header con info del usuario */}
           <div className="p-4 border-b border-slate-200 dark:border-gray-700">
             <Link
@@ -123,6 +136,45 @@ export function UserMenu() {
                 </p>
               </div>
             </Link>
+
+            <Link
+              href="/wallet"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                <Wallet size={20} className="text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                  Mi Wallet
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {balance || "Cargando..."}
+                </p>
+              </div>
+            </Link>
+
+            {/* Admin panel link — only for admins */}
+            {(user.role === "admin" || user.role === "moderator") && (
+              <Link
+                href="/admin"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                  <Shield size={20} className="text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                    Panel de Admin
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Gestionar la plataforma
+                  </p>
+                </div>
+              </Link>
+            )}
 
             <Link
               href="/settings"

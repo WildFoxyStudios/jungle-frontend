@@ -730,7 +730,7 @@ function CheckoutModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 Ciudad <span className="text-red-500">*</span>
@@ -757,7 +757,7 @@ function CheckoutModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 Código postal
@@ -780,7 +780,7 @@ function CheckoutModal({
             <Phone size={15} />
             Datos de contacto
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 Teléfono <span className="text-red-500">*</span>

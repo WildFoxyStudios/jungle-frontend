@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Briefcase,
@@ -13,7 +13,6 @@ import {
   BookmarkPlus,
   BookmarkCheck,
   ChevronDown,
-  ChevronRight,
   Star,
   Users,
   Plus,
@@ -37,7 +36,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import type { JobPosting, JobCategory } from "@/lib/types";
+import type { JobPosting } from "@/lib/types";
 
 // ─── Employment type labels ───────────────────────────────────────────────────
 
@@ -71,8 +70,8 @@ export default function JobsPage() {
   const [applyModal, setApplyModal] = useState<JobPosting | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const debouncedSearch = useSearch(search, 350);
-  const debouncedLocation = useSearch(location, 350);
+  const debouncedSearch = useDebounce(search, 350);
+  const debouncedLocation = useDebounce(location, 350);
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 py-6 pb-24">
@@ -86,7 +85,7 @@ export default function JobsPage() {
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50">
               Empleos
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
               Encuentra tu próxima oportunidad profesional
             </p>
           </div>
@@ -95,7 +94,8 @@ export default function JobsPage() {
           leftIcon={<Plus size={16} />}
           onClick={() => setCreateOpen(true)}
         >
-          Publicar empleo
+          <span className="hidden sm:inline">Publicar empleo</span>
+          <span className="sm:hidden">Publicar</span>
         </Button>
       </div>
 
@@ -155,20 +155,16 @@ export default function JobsPage() {
       )}
 
       {/* Create job modal */}
-      <CreateJobModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateJobModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          // Refresh all job tabs that might be affected
+          window.dispatchEvent(new CustomEvent("refresh-jobs"));
+        }}
+      />
     </div>
   );
-}
-
-// ─── Hook helper ──────────────────────────────────────────────────────────────
-
-function useSearch(value: string, delay: number) {
-  const [debounced, setDebounced] = useState(value);
-  useState(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  });
-  return debounced;
 }
 
 // ─── Search tab ───────────────────────────────────────────────────────────────
@@ -225,7 +221,7 @@ function SearchTab({
   return (
     <div className="space-y-4">
       {/* Search bar */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search
             size={16}
@@ -239,36 +235,38 @@ function SearchTab({
             className="input-base pl-10"
           />
         </div>
-        <div className="relative flex-1 max-w-[240px]">
-          <MapPin
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Ciudad, país..."
-            defaultValue={location}
-            onChange={(e) => onLocationChange(e.target.value)}
-            className="input-base pl-9"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1 sm:flex-initial sm:w-[240px]">
+            <MapPin
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              placeholder="Ciudad, país..."
+              defaultValue={location}
+              onChange={(e) => onLocationChange(e.target.value)}
+              className="input-base pl-9"
+            />
+          </div>
+          <button
+            onClick={onFiltersOpen}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all shrink-0",
+              activeFilters > 0
+                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
+                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-700 dark:text-slate-300 hover:border-indigo-300",
+            )}
+          >
+            <Filter size={16} />
+            Filtros
+            {activeFilters > 0 && (
+              <span className="w-5 h-5 flex items-center justify-center bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                {activeFilters}
+              </span>
+            )}
+          </button>
         </div>
-        <button
-          onClick={onFiltersOpen}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all shrink-0",
-            activeFilters > 0
-              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
-              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-700 dark:text-slate-300 hover:border-indigo-300",
-          )}
-        >
-          <Filter size={16} />
-          Filtros
-          {activeFilters > 0 && (
-            <span className="w-5 h-5 flex items-center justify-center bg-indigo-600 text-white text-[10px] font-bold rounded-full">
-              {activeFilters}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Results count */}
@@ -487,9 +485,10 @@ function ApplicationsTab() {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-900 dark:text-slate-50 truncate">
-                ID: {app.job_id}
+                {app.job_title ?? `Empleo #${app.job_id.slice(0, 8)}`}
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                {app.job_city && `${app.job_city}${app.job_country ? `, ${app.job_country}` : ""} · `}
                 Aplicado{" "}
                 {formatDistanceToNow(new Date(app.created_at), {
                   addSuffix: true,
@@ -524,6 +523,13 @@ function MyJobsTab() {
   const { execute: deleteJob } = useMutation((id: string) =>
     jobsApi.delete(id),
   );
+
+  // Listen for refresh event from CreateJobModal
+  useEffect(() => {
+    const handleRefresh = () => refresh();
+    window.addEventListener("refresh-jobs", handleRefresh);
+    return () => window.removeEventListener("refresh-jobs", handleRefresh);
+  }, [refresh]);
 
   const handleClose = async (id: string, title: string) => {
     if (!confirm(`¿Cerrar la oferta "${title}"?`)) return;
@@ -628,7 +634,7 @@ function MyJobsTab() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-3">
                 <Link href={`/jobs/${job.id}/applicants`}>
                   <Button
                     size="sm"
@@ -825,7 +831,7 @@ function JobCard({
           )}
 
           {/* Details grid */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             {job.city && (
               <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                 <MapPin size={15} className="text-slate-400 shrink-0" />
@@ -844,7 +850,7 @@ function JobCard({
           </div>
 
           {/* Apply button */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               leftIcon={<Send size={15} />}
               onClick={(e) => {
@@ -1148,9 +1154,11 @@ function FiltersModal({
 function CreateJobModal({
   open,
   onClose,
+  onCreated,
 }: {
   open: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 }) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
@@ -1187,6 +1195,7 @@ function CreateJobModal({
         show_salary: form.show_salary,
       });
       toast.success("Oferta publicada exitosamente");
+      onCreated?.();
       onClose();
     } catch {
       toast.error("Error al publicar la oferta");
@@ -1248,7 +1257,7 @@ function CreateJobModal({
         </div>
 
         {/* Location row */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Ciudad
@@ -1274,7 +1283,7 @@ function CreateJobModal({
         </div>
 
         {/* Type + Level */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Tipo de empleo

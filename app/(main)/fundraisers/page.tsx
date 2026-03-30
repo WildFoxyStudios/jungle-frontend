@@ -7,7 +7,6 @@ import {
   HeartHandshake,
   Search,
   Plus,
-  DollarSign,
   Users,
   Clock,
   CheckCircle,
@@ -15,7 +14,6 @@ import {
   Bookmark,
   BookmarkCheck,
   TrendingUp,
-  Target,
   ChevronRight,
   X,
 } from "lucide-react";
@@ -32,7 +30,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Fundraiser, FundraiserCategory } from "@/lib/types";
 
@@ -110,7 +108,8 @@ export default function FundraisersPage() {
           leftIcon={<Plus size={16} />}
           onClick={() => setCreateOpen(true)}
         >
-          Crear recaudación
+          <span className="hidden sm:inline">Crear recaudación</span>
+          <span className="sm:hidden">Crear</span>
         </Button>
       </div>
 
@@ -748,7 +747,7 @@ function DonateModal({
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
               Elige un monto
             </label>
-            <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
               {PRESETS.map((preset) => (
                 <button
                   key={preset}
@@ -949,7 +948,7 @@ function CreateFundraiserModal({
         </div>
 
         {/* Goal + currency */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="col-span-2 flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Meta de recaudación <span className="text-red-500">*</span>
@@ -1058,7 +1057,7 @@ function CreateFundraiserModal({
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
             ¿Para quién es la recaudación?
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {BENEFICIARY_TYPES.map(({ value, label, icon }) => (
               <button
                 key={value}

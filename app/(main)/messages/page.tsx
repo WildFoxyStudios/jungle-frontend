@@ -38,6 +38,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+import { RichContent } from "@/components/ui/rich-content";
 import type { Conversation, Message } from "@/lib/types";
 
 // ─── Helper: format conversation timestamp ────────────────────────────────────
@@ -834,7 +835,7 @@ function MessageBubble({
           >
             {msg.content && (
               <p className="whitespace-pre-wrap break-words leading-relaxed">
-                {msg.content}
+                <RichContent content={msg.content} />
               </p>
             )}
           </div>

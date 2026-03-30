@@ -33,7 +33,9 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Reel, ReelComment } from "@/lib/types";
+import { RichContent } from "@/components/ui/rich-content";
+import { CommentSection, type CommentApiAdapter } from "@/components/feed/comment-section";
+import type { Reel } from "@/lib/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -518,7 +520,11 @@ function ExpandableCaption({ caption }: { caption: string }) {
 
   return (
     <p className="text-white text-sm leading-relaxed">
-      {expanded || !isLong ? caption : `${caption.slice(0, 100)}...`}
+      {expanded || !isLong ? (
+        <RichContent content={caption} />
+      ) : (
+        <RichContent content={`${caption.slice(0, 100)}...`} />
+      )}
       {isLong && (
         <button
           onClick={() => setExpanded((v) => !v)}
@@ -572,7 +578,13 @@ function ActionButton({
   );
 }
 
-// ─── Comments panel ────────────────────────────────────────────────────────────
+// ─── Comments panel (reuses shared CommentSection) ────────────────────────────
+
+const reelCommentsAdapter: CommentApiAdapter = {
+  getComments: (reelId) => reelsApi.getComments(reelId),
+  createComment: (reelId, data) => reelsApi.createComment(reelId, { content: data.content, parent_comment_id: data.parent_comment_id }),
+  deleteComment: async () => {},
+};
 
 function CommentsPanel({
   open,
@@ -585,141 +597,22 @@ function CommentsPanel({
   reelId: string;
   commentsCount: number;
 }) {
-  const { user } = useAuth();
-  const toast = useToast();
-  const [comments, setComments] = useState<ReelComment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [content, setContent] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    reelsApi
-      .getComments(reelId)
-      .then(setComments)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [open, reelId]);
-
-  const handleSubmit = async () => {
-    if (!content.trim()) return;
-    setSubmitting(true);
-    try {
-      await reelsApi.createComment(reelId, { content: content.trim() });
-      setContent("");
-      // Refetch
-      const updated = await reelsApi.getComments(reelId);
-      setComments(updated);
-    } catch {
-      toast.error("Error al comentar");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (!open) return null;
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col justify-end">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      {/* Panel */}
       <div className="relative bg-white dark:bg-gray-900 rounded-t-3xl max-h-[70vh] flex flex-col animate-slide-up shadow-2xl">
-        {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
         </div>
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 pb-3 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="font-bold text-base text-slate-900 dark:text-slate-50">
-            {commentsCount} comentarios
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors text-slate-400"
-          >
+          <h3 className="font-bold text-base text-slate-900 dark:text-slate-50">{commentsCount} comentarios</h3>
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors text-slate-400">
             <X size={18} />
           </button>
         </div>
-
-        {/* Comments list */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-          {loading && (
-            <div className="flex justify-center py-6">
-              <Loader2 size={24} className="animate-spin text-slate-400" />
-            </div>
-          )}
-          {!loading && comments.length === 0 && (
-            <p className="text-center text-slate-400 text-sm py-8">
-              Sé el primero en comentar 💬
-            </p>
-          )}
-          {comments.map((c) => (
-            <div key={c.id} className="flex items-start gap-3">
-              <Avatar size="sm" fallbackName="U" />
-              <div className="flex-1">
-                <div className="bg-slate-100 dark:bg-gray-800 rounded-2xl px-3.5 py-2.5 inline-block">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                    @usuario
-                  </p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200 mt-0.5">
-                    {c.content}
-                  </p>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1 pl-2">
-                  {formatDistanceToNow(new Date(c.created_at), {
-                    addSuffix: true,
-                    locale: es,
-                  })}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Input */}
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center gap-2">
-          <Avatar
-            src={user?.profile_picture_url}
-            alt={user?.full_name}
-            size="sm"
-            fallbackName={user?.full_name ?? user?.username ?? ""}
-          />
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="Añade un comentario..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              className="w-full px-4 py-2 bg-slate-100 dark:bg-gray-800 rounded-full text-sm outline-none focus:bg-white dark:focus:bg-gray-700 border border-transparent focus:border-indigo-400 transition-all placeholder:text-slate-400"
-            />
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!content.trim() || submitting}
-            className={cn(
-              "p-2.5 rounded-full transition-all",
-              content.trim()
-                ? "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-md"
-                : "text-slate-300 dark:text-slate-600 cursor-not-allowed",
-            )}
-          >
-            {submitting ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <Send size={18} />
-            )}
-          </button>
-        </div>
+        <CommentSection entityId={reelId} api={reelCommentsAdapter} variant="panel" />
       </div>
     </div>
   );

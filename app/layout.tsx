@@ -3,6 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { ThemeProvider } from "@/lib/theme-context";
 import { AppProviders } from "./providers";
+import { GlobalErrorHandler } from "@/components/global-error-handler";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -49,12 +50,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning data-scroll-behavior="smooth">
       <body>
         <ThemeProvider>
           <AuthProvider>
             <RealtimeProvider>
-              <AppProviders>{children}</AppProviders>
+              <AppProviders>
+                <GlobalErrorHandler />
+                {children}
+              </AppProviders>
             </RealtimeProvider>
           </AuthProvider>
         </ThemeProvider>

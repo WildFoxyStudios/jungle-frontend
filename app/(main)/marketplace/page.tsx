@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -208,7 +208,8 @@ export default function MarketplacePage() {
             leftIcon={<Plus size={16} />}
             onClick={() => setCreateOpen(true)}
           >
-            Vender artículo
+            <span className="hidden sm:inline">Vender artículo</span>
+            <span className="sm:hidden">Vender</span>
           </Button>
         </div>
       </div>
@@ -792,6 +793,14 @@ function CreateListingModal({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
+  // Cleanup blob URLs on unmount to prevent ERR_FILE_NOT_FOUND
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -868,7 +877,7 @@ function CreateListingModal({
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
             Fotos del artículo
           </label>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {imagePreviews.map((url, i) => (
               <div
                 key={i}
@@ -940,7 +949,7 @@ function CreateListingModal({
         </div>
 
         {/* Price + Condition row */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Precio <span className="text-red-500">*</span>
@@ -981,7 +990,7 @@ function CreateListingModal({
         </div>
 
         {/* Category + Location */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Categoría

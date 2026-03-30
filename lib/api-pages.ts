@@ -126,8 +126,8 @@ export const pagesApi = {
   /** GET /pages/:id/posts – published posts from a page (cursor-paginated) */
   getPosts: (pageId: string, params?: PagesQuery) =>
     api
-      .get<PagePost[]>(`/pages/${pageId}/posts`, { params })
-      .then((r) => r.data),
+      .get<{ data: PagePost[]; next_cursor?: string; has_more: boolean }>(`/pages/${pageId}/posts`, { params })
+      .then((r) => r.data.data),
 
   /** POST /pages/:id/posts – create / schedule a post as the page */
   createPost: (pageId: string, payload: CreatePagePostPayload) =>

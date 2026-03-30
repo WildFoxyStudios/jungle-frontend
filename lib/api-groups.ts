@@ -9,6 +9,14 @@ export interface CreateGroupPayload {
   privacy?: "public" | "private" | "secret";
 }
 
+export interface UpdateGroupPayload {
+  name?: string;
+  description?: string;
+  privacy?: "public" | "private" | "secret";
+  picture_url?: string;
+  cover_url?: string;
+}
+
 export interface CreateGroupPostPayload {
   content: string;
   media_urls?: string[];
@@ -27,14 +35,25 @@ export interface UpdateMemberRolePayload {
   role: MemberRole;
 }
 
+export interface GroupDiscoveryParams {
+  limit?: number;
+  offset?: number;
+  privacy?: string;
+  sort_by?: string;
+}
+
 // ─── Groups API ───────────────────────────────────────────────────────────────
 
 export const groupsApi = {
   // ── Discovery ─────────────────────────────────────────────────────────────
 
-  /** GET /groups – public groups ordered by member count */
-  list: (params?: { limit?: number; offset?: number }) =>
+  /** GET /groups – public groups with optional discovery filters */
+  list: (params?: GroupDiscoveryParams) =>
     api.get<Group[]>("/groups", { params }).then((r) => r.data),
+
+  /** GET /groups/my – groups the current user belongs to */
+  myGroups: () =>
+    api.get<Group[]>("/groups/my").then((r) => r.data),
 
   /** GET /groups/:id */
   get: (groupId: string) =>
@@ -45,6 +64,14 @@ export const groupsApi = {
   /** POST /groups */
   create: (payload: CreateGroupPayload) =>
     api.post<Group>("/groups", payload).then((r) => r.data),
+
+  /** PUT /groups/:id – update group name/description/privacy/images */
+  update: (groupId: string, payload: UpdateGroupPayload) =>
+    api.put<Group>(`/groups/${groupId}`, payload).then((r) => r.data),
+
+  /** DELETE /groups/:id – admin only, cascades all data */
+  delete: (groupId: string) =>
+    api.delete(`/groups/${groupId}`).then((r) => r.data),
 
   // ── Membership ────────────────────────────────────────────────────────────
 
@@ -113,4 +140,12 @@ export const groupsApi = {
     api
       .put<GroupPost>(`/groups/${groupId}/posts/${postId}`, payload)
       .then((r) => r.data),
+
+  /** DELETE /groups/:id/posts/:postId – admin/moderator only */
+  deletePost: (groupId: string, postId: string) =>
+    api.delete(`/groups/${groupId}/posts/${postId}`).then((r) => r.data),
+
+  /** PUT /groups/:id/posts/:postId/pin – toggle pin, admin/moderator only */
+  togglePin: (groupId: string, postId: string) =>
+    api.put(`/groups/${groupId}/posts/${postId}/pin`).then((r) => r.data),
 };

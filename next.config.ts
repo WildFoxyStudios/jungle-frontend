@@ -102,7 +102,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // All pages except wallet — strict COEP/COOP for SharedArrayBuffer
+        source: "/((?!wallet).*)",
         headers: [
           {
             key: "X-Content-Type-Options",
@@ -111,6 +112,36 @@ const nextConfig: NextConfig = {
           {
             key: "X-Frame-Options",
             value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(self), geolocation=(self)",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "credentialless",
+          },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+        ],
+      },
+      {
+        // Wallet page — relaxed headers for Stripe iframes
+        source: "/wallet",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
             key: "X-XSS-Protection",

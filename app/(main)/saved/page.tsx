@@ -169,9 +169,48 @@ export default function SavedPage() {
             variant="secondary"
             onClick={() => setCreateOpen(true)}
           >
-            Nueva colección
+            <span className="hidden sm:inline">Nueva colección</span>
           </Button>
         </div>
+      </div>
+
+      {/* ── Mobile collection bar ─────────────────────────────────── */}
+      <div className="lg:hidden flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-1 -mx-1 px-1">
+        <button
+          onClick={() => setActiveCollection(null)}
+          className={cn(
+            "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all",
+            activeCollection === null
+              ? "bg-indigo-600 text-white"
+              : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-slate-400",
+          )}
+        >
+          <Bookmark size={13} />
+          Todos
+        </button>
+        {collections?.map((col) => (
+          <button
+            key={col.id}
+            onClick={() => setActiveCollection(activeCollection === col.id ? null : col.id)}
+            className={cn(
+              "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all",
+              activeCollection === col.id
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-slate-400",
+            )}
+          >
+            <Folder size={13} />
+            {col.name}
+            {col.is_private && <Lock size={10} />}
+          </button>
+        ))}
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold bg-slate-100 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400"
+        >
+          <Plus size={13} />
+          Nueva
+        </button>
       </div>
 
       <div className="flex gap-5">
@@ -266,7 +305,7 @@ export default function SavedPage() {
         {/* ── Main content ─────────────────────────────────────────────── */}
         <div className="flex-1 min-w-0">
           {/* Section header */}
-          <div className="flex items-center justify-between mb-4 gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
             <h2 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               {activeCollectionData ? (
                 <>

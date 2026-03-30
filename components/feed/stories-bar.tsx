@@ -13,6 +13,9 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getProxyUrl } from "@/lib/media-proxy";
 import type { Story } from "@/lib/types";
+import { ImageUploaderEditor } from "@/components/media/ImageUploaderEditor";
+import { VideoUploaderEditor } from "@/components/media/VideoUploaderEditor";
+import type { ImageSizes } from "@/lib/image-compression";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 
 export function StoriesBar() {
@@ -27,6 +30,9 @@ export function StoriesBar() {
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [storyText, setStoryText] = useState("");
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [showVideoEditor, setShowVideoEditor] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const allStories = stories ?? [];
 
@@ -34,7 +40,9 @@ export function StoriesBar() {
     const idx = allStories.findIndex(s => s.id === story.id);
     setStoryIndex(idx);
     setViewingStory(story);
-    storiesApi.viewStory(story.id).catch(() => {});
+    storiesApi.viewStory(story.id).catch((err) => {
+      console.error("[storiesApi.viewStory] fire-and-forget failed:", err);
+    });
   };
 
   const nextStory = () => {
@@ -58,8 +66,31 @@ export function StoriesBar() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setPreviewFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
+    setPendingFile(f);
+    if (f.type.startsWith("image")) {
+      setShowImageEditor(true);
+    } else if (f.type.startsWith("video")) {
+      setShowVideoEditor(true);
+    }
+  };
+
+  const handleImageProcessed = (sizes: ImageSizes) => {
+    setPreviewFile(sizes.original);
+    setPreviewUrl(URL.createObjectURL(sizes.original));
+    setShowImageEditor(false);
+    setAddOpen(true);
+  };
+
+  const handleVideoProcessed = (result: {
+    videoFile: File;
+    thumbnailFile: File;
+    originalSize: number;
+    processedSize: number;
+    duration: number;
+  }) => {
+    setPreviewFile(result.videoFile);
+    setPreviewUrl(URL.createObjectURL(result.videoFile));
+    setShowVideoEditor(false);
     setAddOpen(true);
   };
 
@@ -148,6 +179,7 @@ export function StoriesBar() {
                   src={getProxyUrl(story.media_url)}
                   alt={story.user_name ?? ""}
                   fill
+                  sizes="120px"
                   className="object-cover"
                 />
               ) : (
@@ -316,6 +348,49 @@ export function StoriesBar() {
           </div>
         )}
       </Modal>
+      {/* Image Editor Modal */}
+      {showImageEditor && pendingFile && (
+        <Modal
+          open={true}
+          onClose={() => {
+            setShowImageEditor(false);
+            setPendingFile(null);
+          }}
+          title="Editar imagen"
+          size="xl"
+        >
+          <ImageUploaderEditor
+            initialFile={pendingFile}
+            onUpload={handleImageProcessed}
+            onCancel={() => {
+              setShowImageEditor(false);
+              setPendingFile(null);
+            }}
+          />
+        </Modal>
+      )}
+
+      {/* Video Editor Modal */}
+      {showVideoEditor && pendingFile && (
+        <Modal
+          open={true}
+          onClose={() => {
+            setShowVideoEditor(false);
+            setPendingFile(null);
+          }}
+          title="Editar video"
+          size="xl"
+        >
+          <VideoUploaderEditor
+            initialFile={pendingFile}
+            onUpload={handleVideoProcessed}
+            onCancel={() => {
+              setShowVideoEditor(false);
+              setPendingFile(null);
+            }}
+          />
+        </Modal>
+      )}
     </>
   );
 }

@@ -101,6 +101,94 @@ body {
     border-radius: 4px;
 }
 
+/* ─── Mobile Safe Areas ───────────────────── */
+.safe-top {
+    padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-left {
+    padding-left: env(safe-area-inset-left);
+}
+
+.safe-right {
+    padding-right: env(safe-area-inset-right);
+}
+
+.px-safe {
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+}
+
+/* ─── Touch & Mobile ──────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    .hover\:bg-slate-100:hover,
+    .hover\:bg-slate-200:hover {
+        background-color: transparent;
+    }
+    
+    /* Increase touch targets */
+    button, 
+    a,
+    [role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scrolling with momentum */
+.scroll-smooth {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Minimal Thin Scrollbar for components */
+.no-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    height: 5px;
+    width: 5px;
+}
+
+.no-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 20px;
+}
+
+/* ─── Touch Action ───────────────────────── */
+.touch-pan-x {
+    touch-action: pan-x;
+}
+
+.touch-pan-y {
+    touch-action: pan-y;
+}
+
+.touch-pinch-zoom {
+    touch-action: pinch-zoom;
+}
+
+/* ─── Responsive Typography ──────────────── */
+/* Base font-size stays at 16px on all devices for consistent rem calculations */
+
 /* ─── Animations ──────────────────────────── */
 @keyframes fadeIn {
     from {
@@ -223,6 +311,27 @@ body {
         stroke-dashoffset: 0;
     }
 }
+@keyframes streamTip {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.9) translateX(-50%);
+    }
+    15% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1.05) translateX(-50%);
+    }
+    25% {
+        transform: translateY(-30px) scale(1) translateX(-50%);
+    }
+    75% {
+        opacity: 1;
+        transform: translateY(-80px) scale(1) translateX(-50%);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-120px) scale(0.9) translateX(-50%);
+    }
+}
 
 /* ─── Animation classes ───────────────────── */
 .animate-fade-in {
@@ -243,11 +352,11 @@ body {
 .animate-slide-left {
     animation: slideInLeft 0.3s ease-out both;
 }
-.animate-reaction-pop {
-    animation: reactionPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-}
 .animate-notif-slide {
     animation: notifSlide 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-stream-tip {
+    animation: streamTip 5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 /* stagger helpers */
@@ -303,14 +412,7 @@ body {
     border-color: #374151;
 }
 
-/* ─── Scrollable hide scrollbar ──────────── */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
+/* ─── Removed duplicate no-scrollbar implementation ──────────── */
 
 /* ─── Text truncate multiline ─────────────── */
 .line-clamp-2 {
@@ -424,13 +526,18 @@ body {
 }
 
 /* ─── Input base ──────────────────────────── */
+@layer components {
 .input-base {
     width: 100%;
-    padding: 0.625rem 0.875rem;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 14px;
+    padding-right: 14px;
     background: #f8fafc;
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
-    font-size: 0.9375rem;
+    font-size: 15px;
+    line-height: 1.5;
     color: #0f172a;
     transition:
         border-color 0.15s,
@@ -476,7 +583,7 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 8px;
     font-weight: 600;
     cursor: pointer;
     border: none;
@@ -494,8 +601,8 @@ body {
     background: #4f46e5;
     color: #fff;
     border-radius: 10px;
-    padding: 0.625rem 1.25rem;
-    font-size: 0.9375rem;
+    padding: 10px 20px;
+    font-size: 15px;
 }
 .btn-primary:hover {
     background: #4338ca;
@@ -510,8 +617,8 @@ body {
     background: #eef2ff;
     color: #4f46e5;
     border-radius: 10px;
-    padding: 0.625rem 1.25rem;
-    font-size: 0.9375rem;
+    padding: 10px 20px;
+    font-size: 15px;
 }
 .btn-secondary:hover {
     background: #e0e7ff;
@@ -527,8 +634,8 @@ body {
     background: transparent;
     color: #64748b;
     border-radius: 10px;
-    padding: 0.625rem 1.25rem;
-    font-size: 0.9375rem;
+    padding: 10px 20px;
+    font-size: 15px;
 }
 .btn-ghost:hover {
     background: #f1f5f9;
@@ -542,31 +649,32 @@ body {
     background: #fef2f2;
     color: #ef4444;
     border-radius: 10px;
-    padding: 0.625rem 1.25rem;
-    font-size: 0.9375rem;
+    padding: 10px 20px;
+    font-size: 15px;
 }
 .btn-danger:hover {
     background: #fee2e2;
 }
 .btn-sm {
-    padding: 0.4rem 0.875rem;
-    font-size: 0.8125rem;
+    padding: 6px 14px;
+    font-size: 13px;
     border-radius: 8px;
 }
 .btn-lg {
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
+    padding: 12px 24px;
+    font-size: 16px;
     border-radius: 12px;
 }
 .btn-xl {
-    padding: 0.875rem 2rem;
-    font-size: 1.0625rem;
+    padding: 14px 32px;
+    font-size: 17px;
     border-radius: 12px;
 }
 .btn-icon {
-    padding: 0.5rem;
+    padding: 8px;
     border-radius: 10px;
 }
 .btn-rounded {
     border-radius: 9999px;
 }
+} /* end @layer components */

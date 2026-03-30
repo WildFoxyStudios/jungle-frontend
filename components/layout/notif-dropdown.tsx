@@ -67,7 +67,7 @@ export function NotifDropdown({ onClose }: NotifDropdownProps) {
   return (
     <div
       ref={ref}
-      className="absolute top-full right-0 mt-1 w-[360px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 z-50 animate-fade-in-down overflow-hidden"
+      className="absolute top-full right-0 mt-1 w-[calc(100vw-1rem)] sm:w-[360px] max-w-[360px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 z-50 animate-fade-in-down overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-gray-700">

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, use } from "react";
+import React, { useState, use, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Users,
@@ -16,16 +17,23 @@ import {
   UserCheck,
   UserX,
   Camera,
-  Bell,
   BellOff,
   Share2,
   Flag,
   Pin,
-} from "lucide-react";
-import { groupsApi } from "@/lib/api-groups";
+  Trash2,
+  Search,
+  Check,
+  Heart,
+  MessageCircle,
+  Image as ImageIcon,
+} from "lucide-react";import { groupsApi } from "@/lib/api-groups";
+import { friendsApi } from "@/lib/api-friends";
+import { uploadApi, validateFile } from "@/lib/api-upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApi, useMutation, useInfiniteApi } from "@/hooks/useApi";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +46,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { RichContent } from "@/components/ui/rich-content";
 import type { Group, GroupMember, GroupPost } from "@/lib/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -74,7 +83,7 @@ export default function GroupPage({
   const { execute: joinGroup, loading: joining } = useMutation(() =>
     groupsApi.join(groupId),
   );
-  const { execute: leaveGroup, loading: leaving } = useMutation(() =>
+  const { execute: leaveGroup } = useMutation(() =>
     groupsApi.leave(groupId),
   );
 
@@ -120,7 +129,7 @@ export default function GroupPage({
             <Skeleton className="h-3.5 w-32" />
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <PostSkeleton key={i} />
           ))}
@@ -152,6 +161,7 @@ export default function GroupPage({
               src={group.cover_url}
               alt={group.name}
               fill
+              sizes="(max-width: 900px) 100vw, 900px"
               className="object-cover"
               priority
             />
@@ -160,12 +170,6 @@ export default function GroupPage({
               <Users size={80} className="text-white/20" />
             </div>
           )}
-          {isAdmin && (
-            <button className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur rounded-lg text-sm font-medium text-slate-700 hover:bg-white transition-colors shadow">
-              <Camera size={14} />
-              Cambiar foto
-            </button>
-          )}
         </div>
       </div>
 
@@ -173,7 +177,7 @@ export default function GroupPage({
       <div className="px-4 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-4">
           {/* Group avatar */}
-          <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 shrink-0 border-4 border-white dark:border-gray-900 shadow-lg -mt-10">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 shrink-0 border-4 border-white dark:border-gray-900 shadow-lg -mt-12 relative z-10">
             {group.picture_url ? (
               <img
                 src={group.picture_url}
@@ -208,7 +212,7 @@ export default function GroupPage({
             </div>
             {group.description && (
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-lg line-clamp-2">
-                {group.description}
+                <RichContent content={group.description} />
               </p>
             )}
           </div>
@@ -318,6 +322,7 @@ export default function GroupPage({
             <GroupPostsFeed
               groupId={groupId}
               isMember={isMember}
+              isAdmin={isAdmin}
               onCreatePost={() => setCreatePostOpen(true)}
             />
           </TabPanel>
@@ -337,7 +342,7 @@ export default function GroupPage({
           {/* ── Admin ────────────────────────────────────────────────────── */}
           {isAdmin && (
             <TabPanel value="admin">
-              <GroupAdminTab groupId={groupId} group={group} />
+              <GroupAdminTab groupId={groupId} group={group} onGroupUpdated={refreshGroup} />
             </TabPanel>
           )}
 
@@ -354,6 +359,9 @@ export default function GroupPage({
         onClose={() => setCreatePostOpen(false)}
         groupId={groupId}
         groupName={group.name}
+        onCreated={() => {
+          window.dispatchEvent(new CustomEvent("refresh-group-posts"));
+        }}
       />
 
       <InviteModal
@@ -370,10 +378,12 @@ export default function GroupPage({
 function GroupPostsFeed({
   groupId,
   isMember,
+  isAdmin,
   onCreatePost,
 }: {
   groupId: string;
   isMember: boolean;
+  isAdmin: boolean;
   onCreatePost: () => void;
 }) {
   const {
@@ -382,6 +392,7 @@ function GroupPostsFeed({
     loadingMore,
     hasMore,
     loadMore,
+    refresh,
   } = useInfiniteApi(
     (offset, limit) => groupsApi.getPosts(groupId),
     [groupId],
@@ -395,6 +406,13 @@ function GroupPostsFeed({
   });
 
   const toast = useToast();
+
+  // Listen for refresh event from CreateGroupPostModal
+  useEffect(() => {
+    const handleRefresh = () => refresh();
+    window.addEventListener("refresh-group-posts", handleRefresh);
+    return () => window.removeEventListener("refresh-group-posts", handleRefresh);
+  }, [refresh]);
 
   return (
     <div className="space-y-4">
@@ -436,7 +454,7 @@ function GroupPostsFeed({
       )}
 
       {posts.map((post, i) => (
-        <GroupPostCard key={post.id} post={post} index={i} />
+        <GroupPostCard key={post.id} post={post} index={i} groupId={groupId} isAdmin={isAdmin} onPostChanged={refresh} />
       ))}
 
       {loadingMore && <PostSkeleton />}
@@ -447,15 +465,77 @@ function GroupPostsFeed({
 
 // ─── Group post card ──────────────────────────────────────────────────────────
 
-function GroupPostCard({ post, index }: { post: GroupPost; index: number }) {
+function GroupPostCard({ post, index, groupId, isAdmin, onPostChanged }: { post: GroupPost; index: number; groupId: string; isAdmin: boolean; onPostChanged: () => void }) {
   const { user } = useAuth();
   const toast = useToast();
   const isOwner = post.author_id === user?.id;
+  const canModerate = isAdmin || isOwner;
+
+  const [liked, setLiked] = useState(false);
+  const [localLikes, setLocalLikes] = useState(post.likes_count);
+
+  const handleLike = () => {
+    setLiked((v) => !v);
+    setLocalLikes((c) => c + (liked ? -1 : 1));
+    // Group posts don't have a dedicated like API yet — optimistic UI only
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("¿Eliminar esta publicación?")) return;
+    try {
+      await groupsApi.deletePost(groupId, post.id);
+      toast.success("Publicación eliminada");
+      onPostChanged();
+    } catch {
+      toast.error("Error al eliminar la publicación");
+    }
+  };
+
+  const handleTogglePin = async () => {
+    try {
+      await groupsApi.togglePin(groupId, post.id);
+      toast.success(post.is_pinned ? "Publicación desfijada" : "Publicación fijada");
+      onPostChanged();
+    } catch {
+      toast.error("Error al cambiar el estado de fijado");
+    }
+  };
+
+  const dropdownItems: any[] = [];
+  if (canModerate) {
+    dropdownItems.push({
+      label: post.is_pinned ? "Desfijar publicación" : "Fijar publicación",
+      icon: <Pin size={15} />,
+      onClick: handleTogglePin,
+    });
+    dropdownItems.push({
+      label: "Eliminar publicación",
+      icon: <Trash2 size={15} />,
+      onClick: handleDelete,
+      danger: true,
+    });
+  }
+  if (!canModerate) {
+    dropdownItems.push({
+      label: "Reportar",
+      icon: <Flag size={15} />,
+      onClick: () => toast.info("Reporte enviado"),
+      danger: true,
+    });
+  }
 
   return (
     <article
       className={cn("surface animate-fade-in-up", `stagger-${(index % 5) + 1}`)}
     >
+      {/* Pinned indicator */}
+      {post.is_pinned && (
+        <div className="px-4 pt-3 pb-0 flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+          <Pin size={12} />
+          Publicación fijada
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between p-4 pb-3">
         <div className="flex items-start gap-3">
@@ -474,11 +554,6 @@ function GroupPostCard({ post, index }: { post: GroupPost; index: number }) {
             >
               {post.author_name ?? "Usuario"}
             </Link>
-            {post.is_pinned && (
-              <Badge variant="primary" size="sm" dot className="ml-2">
-                Fijada
-              </Badge>
-            )}
             <p className="text-xs text-slate-400 mt-0.5">
               {formatDistanceToNow(new Date(post.created_at), {
                 addSuffix: true,
@@ -494,30 +569,14 @@ function GroupPostCard({ post, index }: { post: GroupPost; index: number }) {
               <MoreHorizontal size={18} />
             </button>
           }
-          items={[
-            ...(isOwner
-              ? [
-                  {
-                    label: "Fijar publicación",
-                    icon: <Pin size={15} />,
-                    onClick: () => toast.info("Publicación fijada"),
-                  },
-                ]
-              : []),
-            {
-              label: "Reportar",
-              icon: <Flag size={15} />,
-              onClick: () => toast.info("Reporte enviado"),
-              danger: true,
-            },
-          ]}
+          items={dropdownItems}
         />
       </div>
 
       {/* Content */}
       <div className="px-4 pb-3">
         <p className="text-slate-800 dark:text-slate-100 text-sm leading-relaxed whitespace-pre-wrap">
-          {post.content}
+          <RichContent content={post.content} />
         </p>
       </div>
 
@@ -556,11 +615,33 @@ function GroupPostCard({ post, index }: { post: GroupPost; index: number }) {
       )}
 
       {/* Actions bar */}
-      <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-        <span className="flex items-center gap-1">
-          <span>👍</span> {post.likes_count}
-        </span>
-        <span>{post.comments_count} comentarios</span>
+      <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1">
+        <button
+          onClick={handleLike}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors",
+            liked
+              ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20"
+              : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800",
+          )}
+        >
+          <Heart size={16} fill={liked ? "currentColor" : "none"} />
+          {localLikes > 0 ? localLikes : "Me gusta"}
+        </button>
+        <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors">
+          <MessageCircle size={16} />
+          {post.comments_count > 0 ? post.comments_count : "Comentar"}
+        </button>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`${window.location.origin}/groups/${groupId}?post=${post.id}`);
+            toast.success("Enlace copiado");
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <Share2 size={16} />
+          Compartir
+        </button>
       </div>
     </article>
   );
@@ -902,11 +983,77 @@ function PendingGroup({
 
 // ─── Admin tab ────────────────────────────────────────────────────────────────
 
-function GroupAdminTab({ groupId, group }: { groupId: string; group: Group }) {
+function GroupAdminTab({ groupId, group, onGroupUpdated }: { groupId: string; group: Group; onGroupUpdated: () => void }) {
   const toast = useToast();
+  const router = useRouter();
   const [name, setName] = useState(group.name);
   const [description, setDescription] = useState(group.description ?? "");
+  const [privacy, setPrivacy] = useState(group.privacy);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await groupsApi.update(groupId, { name: name.trim(), description: description.trim(), privacy });
+      toast.success("Grupo actualizado");
+      onGroupUpdated();
+    } catch {
+      toast.error("Error al actualizar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await groupsApi.delete(groupId);
+      toast.success("Grupo eliminado");
+      router.push("/groups");
+    } catch {
+      toast.error("Error al eliminar el grupo");
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      validateFile(file, { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxSizeBytes: 10 * 1024 * 1024 });
+      setUploadingCover(true);
+      const res = await uploadApi.uploadCoverPhoto(file);
+      await groupsApi.update(groupId, { cover_url: res.url });
+      toast.success("Foto de portada actualizada");
+      onGroupUpdated();
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al subir la imagen");
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      validateFile(file, { allowedTypes: ["image/jpeg", "image/png", "image/webp"], maxSizeBytes: 5 * 1024 * 1024 });
+      setUploadingAvatar(true);
+      const res = await uploadApi.uploadProfilePicture(file);
+      await groupsApi.update(groupId, { picture_url: res.url });
+      toast.success("Avatar del grupo actualizado");
+      onGroupUpdated();
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al subir la imagen");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   return (
     <div className="surface p-6 space-y-6 max-w-[600px]">
@@ -914,6 +1061,23 @@ function GroupAdminTab({ groupId, group }: { groupId: string; group: Group }) {
         <Settings size={20} className="text-indigo-500" />
         Configuración del grupo
       </h2>
+
+      {/* Image uploads */}
+      <div className="space-y-3">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Imágenes</label>
+        <div className="flex gap-3">
+          <label className={cn("flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors text-sm", uploadingCover && "opacity-50 pointer-events-none")}>
+            <Camera size={14} />
+            {uploadingCover ? "Subiendo..." : "Portada"}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverUpload} />
+          </label>
+          <label className={cn("flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors text-sm", uploadingAvatar && "opacity-50 pointer-events-none")}>
+            <Camera size={14} />
+            {uploadingAvatar ? "Subiendo..." : "Avatar"}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} />
+          </label>
+        </div>
+      </div>
 
       <div className="space-y-4">
         <div className="flex flex-col gap-1.5">
@@ -937,21 +1101,22 @@ function GroupAdminTab({ groupId, group }: { groupId: string; group: Group }) {
             onChange={(e) => setDescription(e.target.value)}
           />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Privacidad
+          </label>
+          <select
+            className="input-base"
+            value={privacy}
+            onChange={(e) => setPrivacy(e.target.value as any)}
+          >
+            <option value="public">Público</option>
+            <option value="private">Privado</option>
+          </select>
+        </div>
       </div>
 
-      <Button
-        onClick={async () => {
-          setSaving(true);
-          try {
-            toast.success("Grupo actualizado");
-          } catch {
-            toast.error("Error al actualizar");
-          } finally {
-            setSaving(false);
-          }
-        }}
-        loading={saving}
-      >
+      <Button onClick={handleSave} loading={saving} disabled={!name.trim()}>
         Guardar cambios
       </Button>
 
@@ -962,12 +1127,25 @@ function GroupAdminTab({ groupId, group }: { groupId: string; group: Group }) {
         <h3 className="text-sm font-bold text-red-600 dark:text-red-400">
           Zona de peligro
         </h3>
-        <Button
-          variant="danger"
-          onClick={() => toast.info("Función próximamente")}
-        >
-          Eliminar grupo
-        </Button>
+        {!confirmDelete ? (
+          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+            Eliminar grupo
+          </Button>
+        ) : (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl space-y-3">
+            <p className="text-sm text-red-700 dark:text-red-300">
+              ¿Estás seguro? Se eliminarán todas las publicaciones, miembros y datos del grupo. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="danger" onClick={handleDelete} loading={deleting}>
+                Sí, eliminar grupo
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -988,7 +1166,7 @@ function GroupAboutTab({ group }: { group: Group }) {
             Descripción
           </h4>
           <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-            {group.description}
+            <RichContent content={group.description} />
           </p>
         </div>
       )}
@@ -1031,24 +1209,53 @@ function CreateGroupPostModal({
   onClose,
   groupId,
   groupName,
+  onCreated,
 }: {
   open: boolean;
   onClose: () => void;
   groupId: string;
   groupName: string;
+  onCreated?: () => void;
 }) {
   const { user } = useAuth();
   const toast = useToast();
   const [content, setContent] = useState("");
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const results = await uploadApi.uploadPostMedia(Array.from(files));
+      setMediaUrls((prev) => [...prev, ...results.map((r) => r.url)]);
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al subir archivo");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const removeMedia = (idx: number) => {
+    setMediaUrls((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleCreate = async () => {
-    if (!content.trim()) return;
+    if (!content.trim() && mediaUrls.length === 0) return;
     setSaving(true);
     try {
-      await groupsApi.createPost(groupId, { content: content.trim() });
+      await groupsApi.createPost(groupId, {
+        content: content.trim(),
+        media_urls: mediaUrls.length > 0 ? mediaUrls : undefined,
+      });
       toast.success("Publicación creada en el grupo");
       setContent("");
+      setMediaUrls([]);
+      onCreated?.();
       onClose();
     } catch {
       toast.error("Error al crear la publicación");
@@ -1071,7 +1278,7 @@ function CreateGroupPostModal({
           <Button
             onClick={handleCreate}
             loading={saving}
-            disabled={!content.trim()}
+            disabled={!content.trim() && mediaUrls.length === 0}
           >
             Publicar
           </Button>
@@ -1100,6 +1307,52 @@ function CreateGroupPostModal({
           className="w-full min-h-[120px] resize-none border-none outline-none text-base text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-transparent"
           autoFocus
         />
+
+        {/* Media previews */}
+        {mediaUrls.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {mediaUrls.map((url, i) => (
+              <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 dark:bg-gray-800">
+                {url.match(/\.(mp4|webm|mov)/) ? (
+                  <video src={url} className="w-full h-full object-cover" />
+                ) : (
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                )}
+                <button
+                  onClick={() => removeMedia(i)}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Media upload button */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20",
+              uploading && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            <ImageIcon size={18} />
+            {uploading ? "Subiendo..." : "Foto/Video"}
+          </button>
+        </div>
       </div>
     </Modal>
   );
@@ -1117,37 +1370,137 @@ function InviteModal({
   groupId: string;
 }) {
   const toast = useToast();
-  const [copied, setCopied] = useState(false);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
 
-  const link =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/groups/${groupId}`
-      : "";
+  const { data: friends, loading: loadingFriends } = useApi(
+    () => friendsApi.getFriends({ search: debouncedSearch || undefined }),
+    [debouncedSearch],
+  );
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(link).then(() => {
-      setCopied(true);
-      toast.success("Enlace copiado");
-      setTimeout(() => setCopied(false), 2000);
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
+  const handleInvite = async () => {
+    if (selected.size === 0) return;
+    setSending(true);
+    try {
+      await groupsApi.invite(groupId, { user_ids: Array.from(selected) });
+      toast.success(`${selected.size} invitación(es) enviada(s)`);
+      setSelected(new Set());
+      setSearch("");
+      onClose();
+    } catch {
+      toast.error("Error al enviar invitaciones");
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title="Invitar personas" size="sm">
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Comparte este enlace para que tus amigos puedan unirse al grupo.
-        </p>
-        <div className="flex items-center gap-2">
-          <input readOnly value={link} className="input-base flex-1 text-sm" />
-          <Button onClick={copyLink} variant="secondary">
-            {copied ? "¡Copiado!" : "Copiar"}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Invitar amigos al grupo"
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
           </Button>
+          <Button onClick={handleInvite} loading={sending} disabled={selected.size === 0}>
+            Invitar ({selected.size})
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="search"
+            placeholder="Buscar amigos por nombre..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-base pl-9"
+            autoFocus
+          />
         </div>
-        <p className="text-xs text-slate-400">
-          También puedes usar la función de invitar amigos directamente desde el
-          botón principal del grupo.
-        </p>
+
+        {/* Selected count */}
+        {selected.size > 0 && (
+          <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+            {selected.size} amigo(s) seleccionado(s)
+          </p>
+        )}
+
+        {/* Friends list */}
+        <div className="max-h-[300px] overflow-y-auto space-y-1">
+          {loadingFriends && (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-2">
+                  <Skeleton className="w-10 h-10" rounded />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loadingFriends && (friends ?? []).length === 0 && (
+            <p className="text-sm text-slate-400 text-center py-6">
+              {search ? "No se encontraron amigos" : "No tienes amigos para invitar"}
+            </p>
+          )}
+
+          {!loadingFriends &&
+            (friends ?? []).map((friend) => {
+              const isSelected = selected.has(friend.id);
+              return (
+                <button
+                  key={friend.id}
+                  type="button"
+                  onClick={() => toggleSelect(friend.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-2 rounded-xl transition-colors text-left",
+                    isSelected
+                      ? "bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800"
+                      : "hover:bg-slate-50 dark:hover:bg-gray-800",
+                  )}
+                >
+                  <Avatar
+                    src={friend.profile_picture_url}
+                    alt={friend.full_name}
+                    size="md"
+                    fallbackName={friend.full_name ?? friend.username}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-50 truncate">
+                      {friend.full_name || friend.username}
+                    </p>
+                    <p className="text-xs text-slate-400 truncate">@{friend.username}</p>
+                  </div>
+                  <div className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                    isSelected
+                      ? "bg-indigo-600 border-indigo-600"
+                      : "border-slate-300 dark:border-slate-600",
+                  )}>
+                    {isSelected && <Check size={12} className="text-white" />}
+                  </div>
+                </button>
+              );
+            })}
+        </div>
       </div>
     </Modal>
   );

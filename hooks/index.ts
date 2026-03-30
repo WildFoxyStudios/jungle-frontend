@@ -6,3 +6,4 @@ export { useDebounce } from "./useDebounce";
 export { useLocalStorage } from "./useLocalStorage";
 export { useOnlineStatus, useNetworkStatus } from "./useOnlineStatus";
 export { useTypingIndicator } from "./useTypingIndicator";
+export { useVideoAutoPlay } from "./useVideoAutoPlay";

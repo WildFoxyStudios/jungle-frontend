@@ -10,7 +10,6 @@ import {
   Download,
   LogOut,
   Eye,
-  EyeOff,
   Smartphone,
   Globe,
   Users,
@@ -28,20 +27,36 @@ import {
   Languages,
   Palette,
   Info,
+  Wallet,
+  Building2,
+  Mail,
+  User,
+  AtSign,
+  Phone,
+  Search,
 } from "lucide-react";
 import { settingsApi } from "@/lib/api-settings";
 import { securityApi } from "@/lib/api-security";
 import { notificationsApi } from "@/lib/api-notifications";
+import { walletApi, type WalletSettings as WalletSettingsType } from "@/lib/api-wallet";
+import { profileApi } from "@/lib/api-profile";
 import { useApi, useMutation } from "@/hooks/useApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/lib/theme-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Modal } from "@/components/ui/modal";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/toast";
+import { InlineEdit } from "@/components/ui/inline-edit";
+import { PrivacySelector } from "@/components/ui/privacy-selector";
+import {
+  SettingsSidebar,
+  MobileCategoryList,
+  MobileBackHeader,
+  SETTINGS_CATEGORIES,
+  type SettingsCategory,
+} from "@/components/settings/settings-sidebar";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -51,17 +66,9 @@ import type {
   LoginSession,
 } from "@/lib/types";
 
-// ─── Toggle component ─────────────────────────────────────────────────────────
+// ─── Shared components ────────────────────────────────────────────────────────
 
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
+function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
       role="switch"
@@ -69,474 +76,151 @@ function Toggle({
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={cn(
-        "relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2",
+        "relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
         checked ? "bg-indigo-600" : "bg-slate-200 dark:bg-slate-700",
         disabled && "opacity-50 cursor-not-allowed",
       )}
     >
       <span
-        className={cn(
-          "inline-block w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 mt-0.5",
-          checked ? "translate-x-5.5" : "translate-x-0.5",
-        )}
+        className="inline-block w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 mt-0.5"
         style={{ transform: checked ? "translateX(20px)" : "translateX(2px)" }}
       />
     </button>
   );
 }
 
-// ─── Select component ─────────────────────────────────────────────────────────
-
-function Select({
-  value,
-  options,
-  onChange,
-  className,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  className?: string;
+function SettingRow({ icon, label, description, children, danger, onClick }: {
+  icon?: React.ReactNode; label: string; description?: string; children?: React.ReactNode; danger?: boolean; onClick?: () => void;
 }) {
+  const Wrapper = onClick ? "button" : "div";
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={cn("input-base py-2 text-sm cursor-pointer", className)}
+    <Wrapper
+      onClick={onClick}
+      className={cn(
+        "flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 py-3.5 first:pt-0 last:pb-0 w-full text-left",
+        onClick && "hover:bg-slate-50 dark:hover:bg-slate-800/50 -mx-3 px-3 rounded-xl transition-colors cursor-pointer",
+      )}
     >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-// ─── Setting row component ────────────────────────────────────────────────────
-
-function SettingRow({
-  icon,
-  label,
-  description,
-  children,
-  danger,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  description?: string;
-  children?: React.ReactNode;
-  danger?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
       <div className="flex items-start gap-3 flex-1 min-w-0">
-        {icon && (
-          <span
-            className={cn(
-              "mt-0.5 shrink-0",
-              danger ? "text-red-500" : "text-slate-500 dark:text-slate-400",
-            )}
-          >
-            {icon}
-          </span>
-        )}
+        {icon && <span className={cn("mt-0.5 shrink-0", danger ? "text-red-500" : "text-slate-500 dark:text-slate-400")}>{icon}</span>}
         <div className="flex-1 min-w-0">
-          <p
-            className={cn(
-              "text-sm font-medium",
-              danger
-                ? "text-red-600 dark:text-red-400"
-                : "text-slate-800 dark:text-slate-100",
-            )}
-          >
-            {label}
-          </p>
-          {description && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-              {description}
-            </p>
-          )}
+          <p className={cn("text-sm font-medium", danger ? "text-red-600 dark:text-red-400" : "text-slate-800 dark:text-slate-100")}>{label}</p>
+          {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{description}</p>}
         </div>
       </div>
-      {children && <div className="shrink-0">{children}</div>}
-    </div>
+      {children && <div className="shrink-0 sm:ml-auto">{children}</div>}
+      {onClick && !children && <ChevronRight size={16} className="text-slate-400 shrink-0 hidden sm:block" />}
+    </Wrapper>
   );
 }
 
-// ─── Section wrapper ──────────────────────────────────────────────────────────
-
-function SettingsSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="surface p-5 mb-4 animate-fade-in-up">
-      <div className="mb-4">
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-50">
-          {title}
-        </h2>
-        {description && (
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {description}
-          </p>
-        )}
+    <div className="surface p-4 sm:p-5 mb-4">
+      <div className="mb-3">
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-50">{title}</h2>
+        {description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>}
       </div>
-      <div className="divide-y divide-slate-100 dark:divide-slate-800">
-        {children}
-      </div>
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">{children}</div>
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const [category, setCategory] = useState<SettingsCategory | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // On desktop, default to "general"
+  useEffect(() => {
+    if (window.innerWidth >= 768 && !category) setCategory("general");
+  }, []);
+
+  const activeLabel = SETTINGS_CATEGORIES.find((c) => c.id === category)?.label ?? "";
+
   return (
-    <div className="max-w-[760px] mx-auto px-4 py-6 pb-24">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="max-w-[960px] mx-auto px-4 py-6 pb-24">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
           <Shield size={20} className="text-indigo-600 dark:text-indigo-400" />
         </div>
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50">
-            Configuración
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Gestiona tu cuenta, privacidad y preferencias
-          </p>
-        </div>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50">Configuración</h1>
       </div>
 
-      <Tabs defaultTab="privacy">
-        <div className="surface mb-4 overflow-x-auto no-scrollbar">
-          <TabList className="px-2 min-w-max">
-            <Tab value="privacy">
-              <span className="flex items-center gap-1.5">
-                <Lock size={14} />
-                Privacidad
-              </span>
-            </Tab>
-            <Tab value="notifications">
-              <span className="flex items-center gap-1.5">
-                <Bell size={14} />
-                Notificaciones
-              </span>
-            </Tab>
-            <Tab value="security">
-              <span className="flex items-center gap-1.5">
-                <Shield size={14} />
-                Seguridad
-              </span>
-            </Tab>
-            <Tab value="appearance">
-              <span className="flex items-center gap-1.5">
-                <Palette size={14} />
-                Apariencia
-              </span>
-            </Tab>
-            <Tab value="sessions">
-              <span className="flex items-center gap-1.5">
-                <Monitor size={14} />
-                Sesiones
-              </span>
-            </Tab>
-            <Tab value="data">
-              <span className="flex items-center gap-1.5">
-                <Download size={14} />
-                Mis datos
-              </span>
-            </Tab>
-          </TabList>
+      {/* Search */}
+      <div className="relative mb-5">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <input
+          type="search"
+          placeholder="Buscar en configuración..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="input-base pl-10 w-full"
+        />
+      </div>
+
+      <div className="flex gap-5">
+        {/* Desktop sidebar */}
+        <div className="hidden md:block w-[260px] shrink-0">
+          <div className="sticky top-20">
+            <SettingsSidebar active={category ?? "general"} onChange={setCategory} />
+          </div>
         </div>
 
-        <TabPanel value="privacy">
-          <PrivacyTab />
-        </TabPanel>
-        <TabPanel value="notifications">
-          <NotificationsTab />
-        </TabPanel>
-        <TabPanel value="security">
-          <SecurityTab />
-        </TabPanel>
-        <TabPanel value="appearance">
-          <AppearanceTab />
-        </TabPanel>
-        <TabPanel value="sessions">
-          <SessionsTab />
-        </TabPanel>
-        <TabPanel value="data">
-          <DataTab />
-        </TabPanel>
-      </Tabs>
+        {/* Content area */}
+        <div className="flex-1 min-w-0">
+          {/* Mobile: show category list or content */}
+          <div className="md:hidden">
+            {!category ? (
+              <MobileCategoryList onSelect={setCategory} />
+            ) : (
+              <>
+                <MobileBackHeader label="Configuración" onBack={() => setCategory(null)} />
+                <CategoryContent category={category} />
+              </>
+            )}
+          </div>
+
+          {/* Desktop: always show content */}
+          <div className="hidden md:block">
+            <CategoryContent category={category ?? "general"} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── Privacy tab ──────────────────────────────────────────────────────────────
+function CategoryContent({ category }: { category: SettingsCategory }) {
+  switch (category) {
+    case "general": return <GeneralCategory />;
+    case "security": return <SecurityCategory />;
+    case "privacy": return <PrivacyCategory />;
+    case "notifications": return <NotificationsCategory />;
+    case "appearance": return <AppearanceCategory />;
+    case "payments": return <PaymentsCategory />;
+    case "data": return <DataCategory />;
+    default: return null;
+  }
+}
 
-function PrivacyTab() {
+// ─── General ──────────────────────────────────────────────────────────────────
+
+function GeneralCategory() {
+  const { user, updateUser } = useAuth();
   const toast = useToast();
   const { data: settings, loading } = useApi(() => settingsApi.get(), []);
-  const [local, setLocal] = useState<Partial<UserSettings>>({});
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (settings) setLocal(settings);
-  }, [settings]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await settingsApi.update(local);
-      toast.success("Ajustes de privacidad guardados");
-    } catch {
-      toast.error("Error al guardar los ajustes");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const set = (key: keyof UserSettings, value: unknown) => {
-    setLocal((prev) => ({ ...prev, [key]: value }));
-  };
-
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="surface p-5 space-y-4">
-            {Array.from({ length: 3 }).map((_, j) => (
-              <div key={j} className="flex justify-between items-center py-2">
-                <div className="space-y-2">
-                  <Skeleton className="h-3.5 w-40" />
-                  <Skeleton className="h-2.5 w-60" />
-                </div>
-                <Skeleton className="h-6 w-11" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  const visOpts = [
-    { value: "public", label: "Público" },
-    { value: "friends", label: "Amigos" },
-    { value: "only_me", label: "Solo yo" },
-  ];
-
-  const msgOpts = [
-    { value: "everyone", label: "Todos" },
-    { value: "friends", label: "Solo amigos" },
-    { value: "nobody", label: "Nadie" },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {/* Profile visibility */}
-      <SettingsSection
-        title="Visibilidad del perfil"
-        description="Controla quién puede ver tu información personal"
-      >
-        <SettingRow
-          icon={<Globe size={17} />}
-          label="Visibilidad del perfil"
-          description="Quién puede ver tu perfil y publicaciones"
-        >
-          <Select
-            value={local.profile_visibility ?? "friends"}
-            options={visOpts}
-            onChange={(v) => set("profile_visibility", v)}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Eye size={17} />}
-          label="Visibilidad en búsquedas"
-          description="Permite que otros te encuentren por nombre o correo"
-        >
-          <Select
-            value={local.search_visibility ?? "friends"}
-            options={visOpts}
-            onChange={(v) => set("search_visibility", v)}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Clock size={17} />}
-          label="Mostrar estado en línea"
-          description="Permite que tus amigos vean cuándo estás activo"
-        >
-          <Toggle
-            checked={local.online_status_visible ?? true}
-            onChange={(v) => set("online_status_visible", v)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Monitor size={17} />}
-          label="Mostrar actividad reciente"
-          description="Muestra cuándo fue tu última conexión"
-        >
-          <Toggle
-            checked={local.show_active_status ?? true}
-            onChange={(v) => set("show_active_status", v)}
-          />
-        </SettingRow>
-      </SettingsSection>
-
-      {/* Interactions */}
-      <SettingsSection
-        title="Interacciones"
-        description="Controla quién puede interactuar contigo"
-      >
-        <SettingRow
-          icon={<Users size={17} />}
-          label="Solicitudes de amistad"
-          description="Quién puede enviarte solicitudes de amistad"
-        >
-          <Select
-            value={local.who_can_send_requests ?? "everyone"}
-            options={[
-              { value: "everyone", label: "Todos" },
-              { value: "friends_of_friends", label: "Amigos de amigos" },
-              { value: "nobody", label: "Nadie" },
-            ]}
-            onChange={(v) => set("who_can_send_requests", v)}
-            className="w-44"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<MessageCircle size={17} />}
-          label="Mensajes directos"
-          description="Quién puede enviarte mensajes directos"
-        >
-          <Select
-            value={local.who_can_message ?? "friends"}
-            options={msgOpts}
-            onChange={(v) => set("who_can_message", v)}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Users size={17} />}
-          label="Ver lista de amigos"
-          description="Quién puede ver tu lista de amigos"
-        >
-          <Select
-            value={local.who_can_see_friends ?? "friends"}
-            options={visOpts}
-            onChange={(v) => set("who_can_see_friends", v)}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Eye size={17} />}
-          label="Ver publicaciones"
-          description="Quién puede ver tus publicaciones por defecto"
-        >
-          <Select
-            value={local.who_can_see_posts ?? "friends"}
-            options={visOpts}
-            onChange={(v) => set("who_can_see_posts", v)}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<MessageCircle size={17} />}
-          label="Comentar en mis publicaciones"
-          description="Quién puede comentar en tus publicaciones"
-        >
-          <Select
-            value={local.who_can_comment ?? "friends"}
-            options={[
-              { value: "public", label: "Todos" },
-              { value: "friends", label: "Amigos" },
-              { value: "only_me", label: "Nadie" },
-            ]}
-            onChange={(v) => set("who_can_comment", v)}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Tag size={17} />}
-          label="Etiquetarme"
-          description="Quién puede etiquetarte en publicaciones y fotos"
-        >
-          <Select
-            value={local.who_can_tag ?? "friends"}
-            options={visOpts}
-            onChange={(v) => set("who_can_tag", v)}
-            className="w-36"
-          />
-        </SettingRow>
-      </SettingsSection>
-
-      {/* Save button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} loading={saving} size="lg" rounded>
-          Guardar cambios
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Notifications tab ────────────────────────────────────────────────────────
-
-function NotificationsTab() {
-  const toast = useToast();
-  const { data: prefs, loading } = useApi(
-    () => notificationsApi.getPreferences(),
-    [],
-  );
-  const [local, setLocal] = useState<Partial<NotificationPreferences>>({});
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (prefs) setLocal(prefs);
-  }, [prefs]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await notificationsApi.updatePreferences(local);
-      toast.success("Preferencias de notificaciones guardadas");
-    } catch {
-      toast.error("Error al guardar las preferencias");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const set = (key: keyof NotificationPreferences, value: boolean) => {
-    setLocal((prev) => ({ ...prev, [key]: value }));
-  };
-
-  if (loading) {
-    return (
-      <div className="surface p-5 space-y-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex justify-between items-center py-2">
-            <div className="space-y-1.5">
-              <Skeleton className="h-3.5 w-44" />
-              <Skeleton className="h-2.5 w-64" />
-            </div>
-            <Skeleton className="h-6 w-11" />
+          <div key={i} className="surface p-5 space-y-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ))}
       </div>
@@ -544,150 +228,107 @@ function NotificationsTab() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Email notifications */}
-      <SettingsSection
-        title="Notificaciones por correo"
-        description="Recibe un correo electrónico cuando ocurra alguna de estas acciones"
-      >
-        <SettingRow
-          icon={<Users size={17} />}
-          label="Solicitudes de amistad"
-          description="Cuando alguien te envíe una solicitud de amistad"
-        >
-          <Toggle
-            checked={local.email_friend_requests ?? true}
-            onChange={(v) => set("email_friend_requests", v)}
-          />
-        </SettingRow>
+    <div className="space-y-4 animate-fade-in">
+      <Section title="Información personal" description="Gestiona tu nombre y datos de contacto">
+        <InlineEdit
+          icon={<User size={17} />}
+          label="Nombre completo"
+          value={user.full_name ?? ""}
+          placeholder="Tu nombre completo"
+          onSave={async (v) => {
+            const updated = await profileApi.updateProfile({ full_name: v });
+            updateUser(updated);
+            toast.success("Nombre actualizado");
+          }}
+        />
+        <div className="py-1" />
+        <InlineEdit
+          icon={<AtSign size={17} />}
+          label="Nombre de usuario"
+          value={user.username ?? ""}
+          placeholder="tu_usuario"
+          disabled
+          emptyText="No disponible"
+        />
+        <div className="py-1" />
+        <InlineEdit
+          icon={<Mail size={17} />}
+          label="Correo electrónico"
+          value={user.email ?? ""}
+          type="email"
+          disabled
+          emptyText="Sin correo"
+        />
+        <div className="py-1" />
+        <InlineEdit
+          icon={<Phone size={17} />}
+          label="Teléfono"
+          value={user.phone_number ?? ""}
+          type="tel"
+          placeholder="+52 55 1234 5678"
+          onSave={async (v) => {
+            await profileApi.updateProfile({ phone_number: v });
+            toast.success("Teléfono actualizado");
+          }}
+        />
+      </Section>
 
-        <SettingRow
-          icon={<Eye size={17} />}
-          label="Interacciones en publicaciones"
-          description="Reacciones y menciones en tus publicaciones"
-        >
-          <Toggle
-            checked={local.email_post_interactions ?? true}
-            onChange={(v) => set("email_post_interactions", v)}
-          />
+      <Section title="Idioma y región">
+        <SettingRow icon={<Languages size={17} />} label="Idioma" description={settings?.language === "en" ? "English" : "Español"}>
+          <select
+            value={settings?.language ?? "es"}
+            onChange={async (e) => {
+              await settingsApi.update({ language: e.target.value });
+              toast.success("Idioma actualizado");
+            }}
+            className="input-base py-2 text-sm cursor-pointer w-full sm:w-36"
+          >
+            <option value="es">Español</option>
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+            <option value="fr">Français</option>
+          </select>
         </SettingRow>
-
-        <SettingRow
-          icon={<MessageCircle size={17} />}
-          label="Comentarios"
-          description="Cuando alguien comente en tus publicaciones"
-        >
-          <Toggle
-            checked={local.email_comments ?? true}
-            onChange={(v) => set("email_comments", v)}
-          />
+        <SettingRow icon={<Globe size={17} />} label="Zona horaria">
+          <select
+            value={settings?.timezone ?? "America/Mexico_City"}
+            onChange={async (e) => {
+              await settingsApi.update({ timezone: e.target.value });
+              toast.success("Zona horaria actualizada");
+            }}
+            className="input-base py-2 text-sm cursor-pointer w-full sm:w-52"
+          >
+            <option value="America/Mexico_City">Ciudad de México (UTC-6)</option>
+            <option value="America/New_York">Nueva York (UTC-5)</option>
+            <option value="America/Los_Angeles">Los Ángeles (UTC-8)</option>
+            <option value="America/Bogota">Bogotá (UTC-5)</option>
+            <option value="America/Buenos_Aires">Buenos Aires (UTC-3)</option>
+            <option value="Europe/Madrid">Madrid (UTC+1)</option>
+            <option value="UTC">UTC</option>
+          </select>
         </SettingRow>
-
-        <SettingRow
-          icon={<Tag size={17} />}
-          label="Etiquetas"
-          description="Cuando alguien te etiquete en una publicación o foto"
-        >
-          <Toggle
-            checked={local.email_tags ?? true}
-            onChange={(v) => set("email_tags", v)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Globe size={17} />}
-          label="Eventos"
-          description="Invitaciones a eventos y recordatorios"
-        >
-          <Toggle
-            checked={local.email_events ?? true}
-            onChange={(v) => set("email_events", v)}
-          />
-        </SettingRow>
-      </SettingsSection>
-
-      {/* Push notifications */}
-      <SettingsSection
-        title="Notificaciones push"
-        description="Notificaciones en el navegador y dispositivos móviles"
-      >
-        <SettingRow icon={<Users size={17} />} label="Solicitudes de amistad">
-          <Toggle
-            checked={local.push_friend_requests ?? true}
-            onChange={(v) => set("push_friend_requests", v)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Eye size={17} />}
-          label="Interacciones en publicaciones"
-        >
-          <Toggle
-            checked={local.push_post_interactions ?? true}
-            onChange={(v) => set("push_post_interactions", v)}
-          />
-        </SettingRow>
-
-        <SettingRow icon={<MessageCircle size={17} />} label="Comentarios">
-          <Toggle
-            checked={local.push_comments ?? true}
-            onChange={(v) => set("push_comments", v)}
-          />
-        </SettingRow>
-
-        <SettingRow icon={<Tag size={17} />} label="Etiquetas">
-          <Toggle
-            checked={local.push_tags ?? true}
-            onChange={(v) => set("push_tags", v)}
-          />
-        </SettingRow>
-
-        <SettingRow icon={<Globe size={17} />} label="Eventos">
-          <Toggle
-            checked={local.push_events ?? true}
-            onChange={(v) => set("push_events", v)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<MessageCircle size={17} />}
-          label="Mensajes directos"
-          description="Notificaciones de nuevos mensajes"
-        >
-          <Toggle
-            checked={local.push_messages ?? true}
-            onChange={(v) => set("push_messages", v)}
-          />
-        </SettingRow>
-      </SettingsSection>
-
-      {/* Save */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} loading={saving} size="lg" rounded>
-          Guardar cambios
-        </Button>
-      </div>
+      </Section>
     </div>
   );
 }
 
-// ─── Security tab ─────────────────────────────────────────────────────────────
+// ─── Security ─────────────────────────────────────────────────────────────────
 
-function SecurityTab() {
+function SecurityCategory() {
   const toast = useToast();
+  const { data: settings, refresh: refreshSettings } = useApi(() => settingsApi.get(), []);
+  const { data: sessions, loading: loadingSessions, refresh: refreshSessions } = useApi(() => securityApi.getSessions(), []);
+  const { data: auditLog, loading: loadingAudit } = useApi(() => securityApi.getAuditLog({ limit: 10 }), []);
+
   const [setupOpen, setSetupOpen] = useState(false);
-  const [disableOpen, setDisableOpen] = useState(false);
-  const [setupData, setSetupData] = useState<{
-    qr_code_url: string;
-    secret: string;
-    backup_codes: string[];
-  } | null>(null);
+  const [setupData, setSetupData] = useState<{ qr_code_url: string; secret: string } | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
   const [loading2FA, setLoading2FA] = useState(false);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [showBackup, setShowBackup] = useState(false);
+  const [changePassOpen, setChangePassOpen] = useState(false);
+  const [revoking, setRevoking] = useState<Set<string>>(new Set());
 
-  const { data: settings } = useApi(() => settingsApi.get(), []);
   const is2FAEnabled = settings?.two_factor_enabled ?? false;
 
   const handleSetup2FA = async () => {
@@ -696,313 +337,168 @@ function SecurityTab() {
       const data = await securityApi.setup2FA();
       setSetupData(data);
       setSetupOpen(true);
-    } catch {
-      toast.error("Error al configurar 2FA");
-    } finally {
-      setLoading2FA(false);
-    }
+    } catch { toast.error("Error al configurar 2FA"); }
+    finally { setLoading2FA(false); }
   };
 
   const handleEnable2FA = async () => {
-    if (!verifyCode || verifyCode.length !== 6) {
-      toast.error("Ingresa el código de 6 dígitos");
-      return;
-    }
+    if (!verifyCode || verifyCode.length !== 6) { toast.error("Ingresa el código de 6 dígitos"); return; }
     setLoading2FA(true);
     try {
       const result = await securityApi.enable2FA({ code: verifyCode });
       setBackupCodes(result.backup_codes);
       setSetupOpen(false);
       setShowBackup(true);
-      toast.success("Autenticación en dos pasos activada");
-    } catch {
-      toast.error("Código incorrecto. Intenta de nuevo.");
-    } finally {
-      setLoading2FA(false);
-    }
+      refreshSettings();
+      toast.success("2FA activado");
+    } catch { toast.error("Código incorrecto"); }
+    finally { setLoading2FA(false); }
   };
 
-  const handleDisable2FA = async () => {
-    setLoading2FA(true);
+  const handleRevoke = async (id: string) => {
+    setRevoking((p) => new Set([...p, id]));
     try {
-      await securityApi.disable2FA({ code: verifyCode, password: "" });
-      setDisableOpen(false);
-      setVerifyCode("");
-      toast.success("Autenticación en dos pasos desactivada");
-    } catch {
-      toast.error("Código incorrecto");
-    } finally {
-      setLoading2FA(false);
-    }
-  };
-
-  const handleRegenerateCodes = async () => {
-    try {
-      const result = await securityApi.regenerateBackupCodes();
-      setBackupCodes(result.backup_codes);
-      setShowBackup(true);
-      toast.success("Códigos de respaldo regenerados");
-    } catch {
-      toast.error("Error al regenerar códigos");
-    }
+      await securityApi.revokeSession(id);
+      refreshSessions();
+      toast.success("Sesión cerrada");
+    } catch { toast.error("Error al cerrar sesión"); }
+    finally { setRevoking((p) => { const n = new Set(p); n.delete(id); return n; }); }
   };
 
   return (
-    <div className="space-y-4">
-      {/* 2FA */}
-      <SettingsSection
-        title="Autenticación en dos pasos (2FA)"
-        description="Agrega una capa extra de seguridad a tu cuenta"
-      >
-        <SettingRow
-          icon={<Smartphone size={17} />}
-          label="Autenticador de dos pasos"
-          description={
-            is2FAEnabled
-              ? "Tu cuenta está protegida con 2FA."
-              : "Usa una app de autenticación (Google Authenticator, Authy, etc.)"
-          }
-        >
-          <div className="flex items-center gap-2">
-            {is2FAEnabled ? (
-              <>
-                <Badge variant="success" dot>
-                  Activo
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setDisableOpen(true)}
-                  className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  Desactivar
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="sm"
-                leftIcon={<Shield size={14} />}
-                onClick={handleSetup2FA}
-                loading={loading2FA}
-              >
-                Activar
+    <div className="space-y-4 animate-fade-in">
+      {/* Active sessions */}
+      <Section title="Dónde has iniciado sesión" description="Dispositivos con acceso a tu cuenta">
+        {loadingSessions ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-3">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="flex-1 space-y-1.5"><Skeleton className="h-3.5 w-40" /><Skeleton className="h-2.5 w-56" /></div>
+            </div>
+          ))
+        ) : sessions?.map((s: LoginSession, i: number) => (
+          <div key={s.id} className={cn("flex items-center gap-3 py-3", i === 0 && "bg-green-50/50 dark:bg-green-900/10 -mx-3 px-3 rounded-xl")}>
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+              {s.device_type?.includes("mobile") ? <Smartphone size={18} className="text-indigo-500" /> : <Monitor size={18} className="text-indigo-500" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                  {s.device_name ?? s.user_agent?.split(" ")[0] ?? "Dispositivo"}
+                </p>
+                {i === 0 && <Badge variant="success" size="sm" dot>Actual</Badge>}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {s.ip_address}{s.location && ` · ${s.location}`} · {formatDistanceToNow(new Date(s.last_active_at), { addSuffix: true, locale: es })}
+              </p>
+            </div>
+            {i !== 0 && (
+              <Button size="sm" variant="ghost" onClick={() => handleRevoke(s.id)} loading={revoking.has(s.id)} className="text-red-500 shrink-0">
+                Cerrar
               </Button>
             )}
           </div>
-        </SettingRow>
-
-        {is2FAEnabled && (
-          <SettingRow
-            icon={<Key size={17} />}
-            label="Códigos de respaldo"
-            description="Úsalos si pierdes acceso a tu app de autenticación"
-          >
-            <Button
-              size="sm"
-              variant="secondary"
-              leftIcon={<RefreshCw size={13} />}
-              onClick={handleRegenerateCodes}
-            >
-              Regenerar
-            </Button>
-          </SettingRow>
-        )}
-      </SettingsSection>
+        ))}
+      </Section>
 
       {/* Password */}
-      <SettingsSection
-        title="Contraseña"
-        description="Mantén tu contraseña segura y actualizada"
-      >
-        <SettingRow
-          icon={<Lock size={17} />}
-          label="Cambiar contraseña"
-          description="Recomendamos usar una contraseña única de al menos 12 caracteres"
-        >
-          <Button
-            size="sm"
-            variant="secondary"
-            rightIcon={<ChevronRight size={14} />}
-            onClick={() =>
-              toast.info("Recibirás un correo para cambiar tu contraseña")
-            }
-          >
+      <Section title="Contraseña">
+        <SettingRow icon={<Lock size={17} />} label="Cambiar contraseña" description="Usa una contraseña única de al menos 12 caracteres">
+          <Button size="sm" variant="secondary" onClick={() => toast.info("Recibirás un correo para cambiar tu contraseña")}>
             Cambiar
           </Button>
         </SettingRow>
-      </SettingsSection>
+      </Section>
+
+      {/* 2FA */}
+      <Section title="Autenticación en dos pasos" description="Capa extra de seguridad">
+        <SettingRow icon={<Smartphone size={17} />} label="Autenticador" description={is2FAEnabled ? "Activo — tu cuenta está protegida" : "Usa Google Authenticator o Authy"}>
+          {is2FAEnabled ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="success" dot>Activo</Badge>
+              <Button size="sm" variant="ghost" className="text-red-500" onClick={async () => {
+                try { await securityApi.disable2FA({ code: "", password: "" }); refreshSettings(); toast.success("2FA desactivado"); } catch { toast.error("Error"); }
+              }}>Desactivar</Button>
+            </div>
+          ) : (
+            <Button size="sm" leftIcon={<Shield size={14} />} onClick={handleSetup2FA} loading={loading2FA}>Activar</Button>
+          )}
+        </SettingRow>
+        {is2FAEnabled && (
+          <SettingRow icon={<Key size={17} />} label="Códigos de respaldo" description="Úsalos si pierdes tu autenticador">
+            <Button size="sm" variant="secondary" leftIcon={<RefreshCw size={13} />} onClick={async () => {
+              try { const r = await securityApi.regenerateBackupCodes(); setBackupCodes(r.backup_codes); setShowBackup(true); toast.success("Códigos regenerados"); } catch { toast.error("Error"); }
+            }}>Regenerar</Button>
+          </SettingRow>
+        )}
+      </Section>
 
       {/* Login alerts */}
-      <SettingsSection
-        title="Alertas de inicio de sesión"
-        description="Recibe notificaciones cuando se inicie sesión en tu cuenta"
-      >
-        <SettingRow
-          icon={<AlertTriangle size={17} />}
-          label="Alertas de inicio de sesión"
-          description="Notificación por correo cuando alguien acceda desde un nuevo dispositivo"
-        >
-          <Toggle
-            checked={settings?.login_alerts ?? true}
-            onChange={() => {}}
-          />
+      <Section title="Alertas de inicio de sesión">
+        <SettingRow icon={<AlertTriangle size={17} />} label="Alertas por correo" description="Notificación cuando alguien acceda desde un nuevo dispositivo">
+          <Toggle checked={settings?.login_alerts ?? true} onChange={async (v) => {
+            try { await settingsApi.update({ login_alerts: v }); refreshSettings(); toast.success(v ? "Activadas" : "Desactivadas"); } catch { toast.error("Error"); }
+          }} />
         </SettingRow>
-      </SettingsSection>
+      </Section>
 
-      {/* Setup 2FA modal */}
-      <Modal
-        open={setupOpen}
-        onClose={() => setSetupOpen(false)}
-        title="Configurar autenticación en dos pasos"
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setSetupOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleEnable2FA} loading={loading2FA}>
-              Verificar y activar
-            </Button>
-          </>
-        }
-      >
-        {setupData && (
-          <div className="space-y-6">
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-sm text-slate-600 dark:text-slate-300 text-center">
-                Escanea este código QR con tu app de autenticación (Google
-                Authenticator, Authy, etc.)
-              </p>
-              {setupData.qr_code_url && (
-                <div className="w-48 h-48 border-2 border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white flex items-center justify-center">
-                  <img
-                    src={setupData.qr_code_url}
-                    alt="QR Code 2FA"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              )}
-              <div className="w-full p-3 bg-slate-100 dark:bg-gray-800 rounded-xl text-center">
-                <p className="text-xs text-slate-500 mb-1">
-                  O ingresa este código manualmente:
+      {/* Audit log */}
+      {auditLog && auditLog.length > 0 && (
+        <Section title="Actividad de seguridad reciente">
+          {auditLog.slice(0, 5).map((entry) => (
+            <div key={entry.id} className="flex items-start gap-3 py-2.5">
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 mt-0.5">
+                <Shield size={14} className="text-slate-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-800 dark:text-slate-100">{entry.action}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {format(new Date(entry.created_at), "d MMM yyyy, HH:mm", { locale: es })}
+                  {entry.ip_address && ` · ${entry.ip_address}`}
                 </p>
-                <code className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100 tracking-widest">
-                  {setupData.secret}
-                </code>
               </div>
             </div>
+          ))}
+        </Section>
+      )}
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Ingresa el código de verificación de la app
-              </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="000000"
-                value={verifyCode}
-                onChange={(e) =>
-                  setVerifyCode(e.target.value.replace(/\D/g, ""))
-                }
-                className="input-base text-center text-2xl font-mono tracking-[0.5em]"
-                autoFocus
-              />
+      {/* 2FA Setup Modal */}
+      <Modal open={setupOpen} onClose={() => setSetupOpen(false)} title="Configurar 2FA" size="md" footer={
+        <><Button variant="ghost" onClick={() => setSetupOpen(false)}>Cancelar</Button><Button onClick={handleEnable2FA} loading={loading2FA}>Verificar y activar</Button></>
+      }>
+        {setupData && (
+          <div className="space-y-6">
+            <p className="text-sm text-slate-600 dark:text-slate-300 text-center">Escanea este código QR con tu app de autenticación</p>
+            {setupData.qr_code_url && (
+              <div className="w-48 h-48 mx-auto border-2 border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white flex items-center justify-center">
+                <img src={setupData.qr_code_url} alt="QR 2FA" className="w-full h-full object-contain" />
+              </div>
+            )}
+            <div className="w-full p-3 bg-slate-100 dark:bg-gray-800 rounded-xl text-center">
+              <p className="text-xs text-slate-500 mb-1">O ingresa manualmente:</p>
+              <code className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100 tracking-widest">{setupData.secret}</code>
             </div>
+            <input type="text" inputMode="numeric" maxLength={6} placeholder="000000" value={verifyCode}
+              onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
+              className="input-base text-center text-2xl font-mono tracking-[0.5em]" autoFocus />
           </div>
         )}
       </Modal>
 
-      {/* Disable 2FA modal */}
-      <Modal
-        open={disableOpen}
-        onClose={() => setDisableOpen(false)}
-        title="Desactivar autenticación en dos pasos"
-        size="sm"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setDisableOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleDisable2FA}
-              loading={loading2FA}
-            >
-              Desactivar 2FA
-            </Button>
-          </>
-        }
-      >
+      {/* Backup Codes Modal */}
+      <Modal open={showBackup} onClose={() => setShowBackup(false)} title="Códigos de respaldo" size="md" footer={<Button onClick={() => setShowBackup(false)}>Entendido</Button>}>
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-            <AlertTriangle
-              size={18}
-              className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
-            />
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              Desactivar 2FA hará tu cuenta menos segura. Asegúrate de que esto
-              es lo que quieres hacer.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Código de verificación
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              placeholder="000000"
-              value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
-              className="input-base text-center text-xl font-mono tracking-[0.4em]"
-              autoFocus
-            />
-          </div>
-        </div>
-      </Modal>
-
-      {/* Backup codes modal */}
-      <Modal
-        open={showBackup}
-        onClose={() => setShowBackup(false)}
-        title="Códigos de respaldo"
-        size="md"
-        footer={<Button onClick={() => setShowBackup(false)}>Entendido</Button>}
-      >
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-            <AlertTriangle
-              size={18}
-              className="text-amber-600 shrink-0 mt-0.5"
-            />
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              Guarda estos códigos en un lugar seguro. Cada código puede usarse
-              una sola vez si pierdes acceso a tu app de autenticación.
-            </p>
+            <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-700 dark:text-amber-300">Guarda estos códigos en un lugar seguro. Cada uno puede usarse una sola vez.</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {backupCodes.map((code, i) => (
-              <div
-                key={i}
-                className="p-2.5 bg-slate-100 dark:bg-gray-800 rounded-lg text-center font-mono text-sm font-bold text-slate-800 dark:text-slate-100 tracking-widest"
-              >
-                {code}
-              </div>
+              <div key={i} className="p-2.5 bg-slate-100 dark:bg-gray-800 rounded-lg text-center font-mono text-sm font-bold text-slate-800 dark:text-slate-100 tracking-widest">{code}</div>
             ))}
           </div>
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              const text = backupCodes.join("\n");
-              navigator.clipboard.writeText(text);
-            }}
-          >
-            Copiar todos los códigos
+          <Button variant="secondary" className="w-full" onClick={() => { navigator.clipboard.writeText(backupCodes.join("\n")); toast.success("Códigos copiados"); }}>
+            Copiar todos
           </Button>
         </div>
       </Modal>
@@ -1010,529 +506,290 @@ function SecurityTab() {
   );
 }
 
-// ─── Appearance tab ───────────────────────────────────────────────────────────
+// ─── Privacy ──────────────────────────────────────────────────────────────────
 
-function AppearanceTab() {
-  const { theme, setTheme } = useTheme();
+function PrivacyCategory() {
   const toast = useToast();
-  const { data: settings, loading } = useApi(() => settingsApi.get(), []);
-  const [local, setLocal] = useState<Partial<UserSettings>>({});
-  const [saving, setSaving] = useState(false);
+  const { data: settings, loading, refresh } = useApi(() => settingsApi.get(), []);
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (settings) setLocal(settings);
-  }, [settings]);
-
-  const handleSave = async () => {
-    setSaving(true);
+  const save = async (key: string, value: unknown) => {
     try {
-      await settingsApi.update({
-        language: local.language,
-        timezone: local.timezone,
-      });
-      toast.success("Preferencias guardadas");
-    } catch {
-      toast.error("Error al guardar");
-    } finally {
-      setSaving(false);
-    }
+      await settingsApi.update({ [key]: value } as any);
+      refresh();
+      toast.success("Privacidad actualizada");
+    } catch { toast.error("Error al guardar"); }
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Theme */}
-      <SettingsSection
-        title="Tema"
-        description="Personaliza el aspecto visual de la aplicación"
-      >
-        <SettingRow
-          icon={theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
-          label="Modo oscuro"
-          description="Cambia entre el tema claro y oscuro"
-        >
-          <Toggle
-            checked={theme === "dark"}
-            onChange={(v) => setTheme(v ? "dark" : "light")}
-          />
-        </SettingRow>
+  if (loading) return <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="surface p-5"><Skeleton className="h-4 w-40 mb-3" /><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full mt-2" /></div>)}</div>;
 
-        <div className="py-4">
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-            <Palette size={16} className="text-slate-500" />
-            Elige tu tema
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              {
-                id: "light",
-                label: "Claro",
-                icon: <Sun size={18} />,
-                bg: "bg-white border-slate-200",
-              },
-              {
-                id: "dark",
-                label: "Oscuro",
-                icon: <Moon size={18} />,
-                bg: "bg-gray-900 border-gray-700",
-              },
-              {
-                id: "system",
-                label: "Sistema",
-                icon: <Monitor size={18} />,
-                bg: "bg-gradient-to-r from-white to-gray-900 border-slate-300",
-              },
-            ].map((t) => (
+  const privacyItems = [
+    { key: "who_can_see_posts", icon: <Eye size={17} />, label: "Quién puede ver tus publicaciones", value: settings?.who_can_see_posts ?? "friends" },
+    { key: "who_can_send_requests", icon: <Users size={17} />, label: "Quién puede enviarte solicitudes de amistad", value: settings?.who_can_send_requests ?? "everyone" },
+    { key: "who_can_see_friends", icon: <Users size={17} />, label: "Quién puede ver tu lista de amigos", value: settings?.who_can_see_friends ?? "friends" },
+    { key: "profile_visibility", icon: <Globe size={17} />, label: "Quién puede ver tu perfil", value: settings?.profile_visibility ?? "friends" },
+    { key: "search_visibility", icon: <Search size={17} />, label: "Quién puede encontrarte en búsquedas", value: settings?.search_visibility ?? "friends" },
+    { key: "who_can_message", icon: <MessageCircle size={17} />, label: "Quién puede enviarte mensajes", value: settings?.who_can_message ?? "friends" },
+    { key: "who_can_comment", icon: <MessageCircle size={17} />, label: "Quién puede comentar en tus publicaciones", value: settings?.who_can_comment ?? "friends" },
+    { key: "who_can_tag", icon: <Tag size={17} />, label: "Quién puede etiquetarte", value: settings?.who_can_tag ?? "friends" },
+  ];
+
+  const getLabel = (v: string) => v === "public" ? "Público" : v === "friends" ? "Amigos" : v === "everyone" ? "Todos" : v === "friends_of_friends" ? "Amigos de amigos" : v === "nobody" ? "Nadie" : "Solo yo";
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <Section title="Quién puede ver tu contenido" description="Controla la visibilidad de tu información">
+        {privacyItems.map((item) => (
+          <div key={item.key}>
+            <SettingRow
+              icon={item.icon}
+              label={item.label}
+              description={getLabel(item.value)}
+              onClick={() => setExpandedItem(expandedItem === item.key ? null : item.key)}
+            />
+            {expandedItem === item.key && (
+              <div className="pl-8 sm:pl-11 pb-3 animate-fade-in">
+                <PrivacySelector value={item.value} onChange={(v) => { save(item.key, v); setExpandedItem(null); }} />
+              </div>
+            )}
+          </div>
+        ))}
+      </Section>
+
+      <Section title="Actividad">
+        <SettingRow icon={<Clock size={17} />} label="Mostrar estado en línea" description="Tus amigos ven cuándo estás activo">
+          <Toggle checked={settings?.online_status_visible ?? true} onChange={(v) => save("online_status_visible", v)} />
+        </SettingRow>
+        <SettingRow icon={<Monitor size={17} />} label="Mostrar actividad reciente" description="Muestra cuándo fue tu última conexión">
+          <Toggle checked={settings?.show_active_status ?? true} onChange={(v) => save("show_active_status", v)} />
+        </SettingRow>
+      </Section>
+    </div>
+  );
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+function NotificationsCategory() {
+  const toast = useToast();
+  const { data: prefs, loading, refresh } = useApi(() => notificationsApi.getPreferences(), []);
+
+  const save = async (key: string, value: boolean) => {
+    try {
+      await notificationsApi.updatePreferences({ [key]: value } as any);
+      refresh();
+    } catch { toast.error("Error al guardar"); }
+  };
+
+  if (loading) return <div className="space-y-4">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="surface p-5 space-y-3">{Array.from({ length: 4 }).map((_, j) => <div key={j} className="flex justify-between py-2"><Skeleton className="h-3.5 w-40" /><Skeleton className="h-6 w-11" /></div>)}</div>)}</div>;
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <Section title="Notificaciones por correo" description="Recibe un email cuando ocurra alguna acción">
+        <SettingRow icon={<Users size={17} />} label="Solicitudes de amistad"><Toggle checked={prefs?.email_friend_requests ?? true} onChange={(v) => save("email_friend_requests", v)} /></SettingRow>
+        <SettingRow icon={<Eye size={17} />} label="Interacciones en publicaciones"><Toggle checked={prefs?.email_post_interactions ?? true} onChange={(v) => save("email_post_interactions", v)} /></SettingRow>
+        <SettingRow icon={<MessageCircle size={17} />} label="Comentarios"><Toggle checked={prefs?.email_comments ?? true} onChange={(v) => save("email_comments", v)} /></SettingRow>
+        <SettingRow icon={<Tag size={17} />} label="Etiquetas"><Toggle checked={prefs?.email_tags ?? true} onChange={(v) => save("email_tags", v)} /></SettingRow>
+        <SettingRow icon={<Globe size={17} />} label="Eventos"><Toggle checked={prefs?.email_events ?? true} onChange={(v) => save("email_events", v)} /></SettingRow>
+      </Section>
+
+      <Section title="Notificaciones push" description="Notificaciones en el navegador y dispositivos">
+        <SettingRow icon={<Users size={17} />} label="Solicitudes de amistad"><Toggle checked={prefs?.push_friend_requests ?? true} onChange={(v) => save("push_friend_requests", v)} /></SettingRow>
+        <SettingRow icon={<Eye size={17} />} label="Interacciones"><Toggle checked={prefs?.push_post_interactions ?? true} onChange={(v) => save("push_post_interactions", v)} /></SettingRow>
+        <SettingRow icon={<MessageCircle size={17} />} label="Comentarios"><Toggle checked={prefs?.push_comments ?? true} onChange={(v) => save("push_comments", v)} /></SettingRow>
+        <SettingRow icon={<Tag size={17} />} label="Etiquetas"><Toggle checked={prefs?.push_tags ?? true} onChange={(v) => save("push_tags", v)} /></SettingRow>
+        <SettingRow icon={<Globe size={17} />} label="Eventos"><Toggle checked={prefs?.push_events ?? true} onChange={(v) => save("push_events", v)} /></SettingRow>
+        <SettingRow icon={<MessageCircle size={17} />} label="Mensajes directos"><Toggle checked={prefs?.push_messages ?? true} onChange={(v) => save("push_messages", v)} /></SettingRow>
+      </Section>
+    </div>
+  );
+}
+
+// ─── Appearance ───────────────────────────────────────────────────────────────
+
+function AppearanceCategory() {
+  const { theme, setTheme } = useTheme();
+
+  const themes = [
+    { id: "light" as const, label: "Claro", icon: <Sun size={20} />, bg: "bg-white border-slate-200" },
+    { id: "dark" as const, label: "Oscuro", icon: <Moon size={20} />, bg: "bg-gray-900 border-gray-700" },
+  ];
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <Section title="Tema" description="Personaliza el aspecto visual">
+        <div className="py-3">
+          <div className="grid grid-cols-2 gap-3">
+            {themes.map((t) => (
               <button
                 key={t.id}
-                onClick={() =>
-                  setTheme(
-                    t.id === "system" ? "light" : (t.id as "light" | "dark"),
-                  )
-                }
+                onClick={() => setTheme(t.id)}
                 className={cn(
-                  "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                  "flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all",
                   t.bg,
-                  theme === t.id
-                    ? "border-indigo-500 ring-2 ring-indigo-500/30"
-                    : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700",
+                  theme === t.id ? "border-indigo-500 ring-2 ring-indigo-500/30" : "hover:border-indigo-300 dark:hover:border-indigo-700",
                 )}
               >
-                <span
-                  className={cn(
-                    theme === "dark" || t.id === "dark"
-                      ? "text-white"
-                      : "text-slate-700",
-                  )}
-                >
-                  {t.icon}
-                </span>
-                <span
-                  className={cn(
-                    "text-xs font-semibold",
-                    theme === "dark" || t.id === "dark"
-                      ? "text-slate-300"
-                      : "text-slate-700",
-                  )}
-                >
-                  {t.label}
-                </span>
+                <span className={t.id === "dark" ? "text-white" : "text-slate-700"}>{t.icon}</span>
+                <span className={cn("text-sm font-semibold", t.id === "dark" ? "text-slate-300" : "text-slate-700")}>{t.label}</span>
               </button>
             ))}
           </div>
+          <button
+            onClick={() => {
+              const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              setTheme(prefersDark ? "dark" : "light");
+            }}
+            className="w-full mt-3 flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all text-sm font-medium text-slate-600 dark:text-slate-300"
+          >
+            <Monitor size={16} />
+            Usar tema del sistema
+          </button>
         </div>
-      </SettingsSection>
-
-      {/* Language & region */}
-      <SettingsSection
-        title="Idioma y región"
-        description="Configura el idioma y zona horaria de la aplicación"
-      >
-        <SettingRow
-          icon={<Languages size={17} />}
-          label="Idioma de la aplicación"
-          description="El idioma en que se mostrará la interfaz"
-        >
-          <Select
-            value={local.language ?? "es"}
-            options={[
-              { value: "es", label: "Español" },
-              { value: "en", label: "English" },
-              { value: "pt", label: "Português" },
-              { value: "fr", label: "Français" },
-              { value: "de", label: "Deutsch" },
-            ]}
-            onChange={(v) => setLocal((p) => ({ ...p, language: v }))}
-            className="w-36"
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={<Globe size={17} />}
-          label="Zona horaria"
-          description="Usada para mostrar fechas y horas correctamente"
-        >
-          <Select
-            value={local.timezone ?? "America/Mexico_City"}
-            options={[
-              {
-                value: "America/Mexico_City",
-                label: "Ciudad de México (UTC-6)",
-              },
-              { value: "America/New_York", label: "Nueva York (UTC-5)" },
-              { value: "America/Los_Angeles", label: "Los Ángeles (UTC-8)" },
-              { value: "America/Bogota", label: "Bogotá (UTC-5)" },
-              { value: "America/Buenos_Aires", label: "Buenos Aires (UTC-3)" },
-              { value: "America/Santiago", label: "Santiago (UTC-4)" },
-              { value: "Europe/Madrid", label: "Madrid (UTC+1)" },
-              { value: "UTC", label: "UTC" },
-            ]}
-            onChange={(v) => setLocal((p) => ({ ...p, timezone: v }))}
-            className="w-52"
-          />
-        </SettingRow>
-      </SettingsSection>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} loading={saving} size="lg" rounded>
-          Guardar cambios
-        </Button>
-      </div>
+      </Section>
     </div>
   );
 }
 
-// ─── Sessions tab ─────────────────────────────────────────────────────────────
+// ─── Payments ─────────────────────────────────────────────────────────────────
 
-function SessionsTab() {
+function PaymentsCategory() {
   const toast = useToast();
-  const {
-    data: sessions,
-    loading,
-    refresh,
-  } = useApi(() => securityApi.getSessions(), []);
-  const [revoking, setRevoking] = useState<Set<string>>(new Set());
+  const { data: settings, loading, refresh } = useApi(() => walletApi.getSettings(), []);
+  const [local, setLocal] = useState<Partial<WalletSettingsType>>({});
+  const [saving, setSaving] = useState(false);
 
-  const handleRevoke = async (sessionId: string) => {
-    setRevoking((prev) => new Set([...prev, sessionId]));
-    try {
-      await securityApi.revokeSession(sessionId);
-      toast.success("Sesión cerrada");
-      refresh();
-    } catch {
-      toast.error("Error al cerrar la sesión");
-    } finally {
-      setRevoking((prev) => {
-        const next = new Set(prev);
-        next.delete(sessionId);
-        return next;
-      });
-    }
+  useEffect(() => { if (settings) setLocal(settings); }, [settings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try { await walletApi.updateSettings(local); refresh(); toast.success("Configuración guardada"); }
+    catch { toast.error("Error al guardar"); }
+    finally { setSaving(false); }
   };
 
-  const handleRevokeAll = async () => {
-    if (!confirm("¿Cerrar sesión en todos los otros dispositivos?")) return;
-    try {
-      await securityApi.revokeAllSessions();
-      toast.success("Todas las sesiones cerradas");
-      refresh();
-    } catch {
-      toast.error("Error al cerrar sesiones");
-    }
-  };
+  const set = (key: keyof WalletSettingsType, value: unknown) => setLocal((p) => ({ ...p, [key]: value }));
 
-  const deviceIcon = (type?: string) => {
-    if (type?.includes("mobile") || type?.includes("phone"))
-      return <Smartphone size={20} className="text-indigo-500" />;
-    return <Monitor size={20} className="text-indigo-500" />;
-  };
+  if (loading) return <div className="space-y-4">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="surface p-5 space-y-3"><Skeleton className="h-4 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>)}</div>;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
-            Dispositivos conectados
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Gestiona los dispositivos que tienen acceso a tu cuenta
-          </p>
+    <div className="space-y-4 animate-fade-in">
+      <Section title="Métodos de pago" description="Configura tus métodos de retiro">
+        <SettingRow icon={<Building2 size={17} />} label="IBAN" description="Cuenta bancaria para transferencias">
+          <input type="text" value={local.default_iban || ""} onChange={(e) => set("default_iban", e.target.value)} placeholder="ES00 0000 0000 ..." className="input-base w-full sm:w-64 text-sm" />
+        </SettingRow>
+        <SettingRow icon={<User size={17} />} label="Titular de la cuenta">
+          <input type="text" value={local.default_account_holder_name || ""} onChange={(e) => set("default_account_holder_name", e.target.value)} placeholder="Nombre Apellidos" className="input-base w-full sm:w-64 text-sm" />
+        </SettingRow>
+        <SettingRow icon={<Mail size={17} />} label="Email de PayPal">
+          <input type="email" value={local.default_paypal_email || ""} onChange={(e) => set("default_paypal_email", e.target.value)} placeholder="tu@email.com" className="input-base w-full sm:w-64 text-sm" />
+        </SettingRow>
+      </Section>
+
+      <Section title="Preferencias de retiro">
+        <SettingRow icon={<Wallet size={17} />} label="Método preferido">
+          <select value={local.preferred_withdrawal_method || "iban"} onChange={(e) => set("preferred_withdrawal_method", e.target.value)} className="input-base py-2 text-sm cursor-pointer w-full sm:w-44">
+            <option value="iban">Transferencia bancaria</option>
+            <option value="paypal">PayPal</option>
+          </select>
+        </SettingRow>
+        <SettingRow icon={<Shield size={17} />} label="Requerir 2FA para retiros">
+          <Toggle checked={local.require_2fa_for_withdrawal ?? true} onChange={(v) => set("require_2fa_for_withdrawal", v)} />
+        </SettingRow>
+      </Section>
+
+      <Section title="Información">
+        <div className="py-2 space-y-3">
+          {[
+            { icon: <AlertTriangle size={15} className="text-amber-500" />, text: "Monto mínimo de retiro: €100.00" },
+            { icon: <Clock size={15} className="text-blue-500" />, text: "Procesamiento: 1-3 días hábiles" },
+            { icon: <Shield size={15} className="text-green-500" />, text: "Transacciones cifradas y protegidas" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300">{item.icon}<span>{item.text}</span></div>
+          ))}
         </div>
-        {sessions && sessions.length > 1 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRevokeAll}
-            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-            leftIcon={<LogOut size={14} />}
-          >
-            Cerrar todas
-          </Button>
-        )}
+      </Section>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} loading={saving} size="lg" rounded>Guardar cambios</Button>
       </div>
-
-      {loading && (
-        <div className="surface divide-y divide-slate-100 dark:divide-slate-800">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4">
-              <Skeleton className="w-10 h-10 shrink-0" rounded />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-3.5 w-48" />
-                <Skeleton className="h-2.5 w-64" />
-              </div>
-              <Skeleton className="h-8 w-20" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!loading && sessions?.length === 0 && (
-        <div className="surface p-8 text-center text-slate-500 dark:text-slate-400">
-          Sin sesiones activas
-        </div>
-      )}
-
-      {!loading && sessions && sessions.length > 0 && (
-        <div className="surface divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
-          {sessions.map((session: LoginSession, i) => (
-            <div
-              key={session.id}
-              className={cn(
-                "flex items-center gap-4 p-4 animate-fade-in",
-                `stagger-${(i % 5) + 1}`,
-                session.is_active &&
-                  i === 0 &&
-                  "bg-green-50/50 dark:bg-green-900/10",
-              )}
-            >
-              {/* Device icon */}
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
-                {deviceIcon(session.device_type)}
-              </div>
-
-              {/* Session info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                    {session.device_name ??
-                      session.user_agent?.split(" ")[0] ??
-                      "Dispositivo desconocido"}
-                  </p>
-                  {i === 0 && (
-                    <Badge variant="success" size="sm" dot>
-                      Actual
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 mt-0.5">
-                  {session.ip_address && (
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <MapPin size={10} />
-                      {session.ip_address}
-                      {session.location && ` · ${session.location}`}
-                    </span>
-                  )}
-                  <span className="text-xs text-slate-400">
-                    {formatDistanceToNow(new Date(session.last_active), {
-                      addSuffix: true,
-                      locale: es,
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Revoke button */}
-              {i !== 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRevoke(session.id)}
-                  loading={revoking.has(session.id)}
-                  className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
-                >
-                  Cerrar
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-// ─── Data tab (GDPR) ──────────────────────────────────────────────────────────
+// ─── Data / GDPR ──────────────────────────────────────────────────────────────
 
-function DataTab() {
+function DataCategory() {
   const toast = useToast();
   const { logout } = useAuth();
   const [exporting, setExporting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      await securityApi.requestDataExport();
-      toast.success(
-        "Solicitud enviada. Recibirás un correo cuando tus datos estén listos (puede tardar hasta 48h).",
-      );
-    } catch {
-      toast.error("Error al solicitar la exportación");
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteInput !== "ELIMINAR") {
-      toast.error('Escribe "ELIMINAR" para confirmar');
-      return;
-    }
-    setDeleting(true);
-    try {
-      await securityApi.requestDataDeletion();
-      toast.success(
-        "Solicitud de eliminación enviada. Tu cuenta será eliminada en 30 días.",
-      );
-      setDeleteConfirmOpen(false);
-      setTimeout(() => logout(), 3000);
-    } catch {
-      toast.error("Error al procesar la solicitud");
-    } finally {
-      setDeleting(false);
-    }
-  };
+  const [deleting, setDeleting] = useState(false);
 
   return (
-    <div className="space-y-4">
-      {/* Export data */}
-      <SettingsSection
-        title="Exportar mis datos"
-        description="Descarga una copia de toda la información que tenemos sobre tu cuenta"
-      >
-        <SettingRow
-          icon={<Download size={17} />}
-          label="Descargar mis datos"
-          description="Incluye publicaciones, fotos, mensajes, amigos y toda tu actividad. Puede tardar hasta 48 horas en generarse."
-        >
-          <Button
-            size="sm"
-            variant="secondary"
-            leftIcon={<Download size={14} />}
-            onClick={handleExport}
-            loading={exporting}
-          >
-            Solicitar
-          </Button>
+    <div className="space-y-4 animate-fade-in">
+      <Section title="Descargar tu información" description="Obtén una copia de todos tus datos">
+        <SettingRow icon={<Download size={17} />} label="Solicitar exportación" description="Incluye publicaciones, fotos, mensajes y toda tu actividad. Puede tardar hasta 48h.">
+          <Button size="sm" variant="secondary" leftIcon={<Download size={14} />} loading={exporting} onClick={async () => {
+            setExporting(true);
+            try { await securityApi.requestDataExport(); toast.success("Solicitud enviada. Recibirás un correo cuando esté listo."); }
+            catch { toast.error("Error al solicitar"); }
+            finally { setExporting(false); }
+          }}>Solicitar</Button>
         </SettingRow>
-      </SettingsSection>
+      </Section>
 
-      {/* Data usage info */}
-      <SettingsSection
-        title="Información sobre tus datos"
-        description="Cómo usamos y protegemos tu información"
-      >
-        <div className="py-3 space-y-3">
+      <Section title="Sobre tus datos">
+        <div className="py-2 space-y-3">
           {[
-            {
-              icon: <Shield size={16} className="text-green-500" />,
-              title: "Datos cifrados",
-              desc: "Tu contraseña y datos sensibles están cifrados con AES-256",
-            },
-            {
-              icon: <Eye size={16} className="text-blue-500" />,
-              title: "Sin publicidad dirigida",
-              desc: "No vendemos tus datos ni los usamos para publicidad de terceros",
-            },
-            {
-              icon: <Download size={16} className="text-indigo-500" />,
-              title: "Portabilidad de datos",
-              desc: "Siempre puedes exportar y llevar tus datos donde quieras",
-            },
-            {
-              icon: <Trash2 size={16} className="text-red-500" />,
-              title: "Derecho al olvido",
-              desc: "Puedes solicitar la eliminación completa de tu cuenta y datos",
-            },
+            { icon: <Shield size={15} className="text-green-500" />, title: "Datos cifrados", desc: "Contraseña y datos sensibles cifrados con AES-256" },
+            { icon: <Eye size={15} className="text-blue-500" />, title: "Sin publicidad dirigida", desc: "No vendemos tus datos a terceros" },
+            { icon: <Download size={15} className="text-indigo-500" />, title: "Portabilidad", desc: "Exporta y lleva tus datos donde quieras" },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-3">
               <span className="mt-0.5">{item.icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {item.title}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
-              </div>
+              <div><p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{item.title}</p><p className="text-xs text-slate-500 mt-0.5">{item.desc}</p></div>
             </div>
           ))}
         </div>
-      </SettingsSection>
+      </Section>
 
-      {/* Delete account */}
       <div className="surface p-5 border-2 border-red-200 dark:border-red-900/50">
         <div className="flex items-start gap-3 mb-4">
           <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-bold text-red-600 dark:text-red-400">
-              Eliminar cuenta
-            </h3>
+            <h3 className="font-bold text-red-600 dark:text-red-400">Eliminar cuenta</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-              Esta acción es{" "}
-              <strong className="text-red-500">
-                permanente e irreversible
-              </strong>
-              . Todos tus datos (publicaciones, fotos, mensajes, amistades)
-              serán eliminados después de 30 días de gracia.
+              Esta acción es <strong className="text-red-500">permanente e irreversible</strong>. Todos tus datos serán eliminados después de 30 días de gracia.
             </p>
           </div>
         </div>
-        <Button
-          variant="danger"
-          leftIcon={<Trash2 size={15} />}
-          onClick={() => setDeleteConfirmOpen(true)}
-        >
-          Solicitar eliminación de cuenta
+        <Button variant="danger" leftIcon={<Trash2 size={15} />} onClick={() => setDeleteOpen(true)}>
+          Solicitar eliminación
         </Button>
       </div>
 
-      {/* Delete confirmation modal */}
-      <Modal
-        open={deleteConfirmOpen}
-        onClose={() => {
-          setDeleteConfirmOpen(false);
-          setDeleteInput("");
-        }}
-        title="Eliminar cuenta definitivamente"
-        size="sm"
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setDeleteConfirmOpen(false);
-                setDeleteInput("");
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleDeleteAccount}
-              loading={deleting}
-              disabled={deleteInput !== "ELIMINAR"}
-            >
-              Eliminar mi cuenta
-            </Button>
-          </>
-        }
-      >
+      <Modal open={deleteOpen} onClose={() => { setDeleteOpen(false); setDeleteInput(""); }} title="Eliminar cuenta" size="sm" footer={
+        <><Button variant="ghost" onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}>Cancelar</Button>
+        <Button variant="danger" onClick={async () => {
+          if (deleteInput !== "ELIMINAR") { toast.error('Escribe "ELIMINAR"'); return; }
+          setDeleting(true);
+          try { await securityApi.requestDataDeletion(); toast.success("Solicitud enviada. Tu cuenta será eliminada en 30 días."); setDeleteOpen(false); setTimeout(() => logout(), 3000); }
+          catch { toast.error("Error"); }
+          finally { setDeleting(false); }
+        }} loading={deleting} disabled={deleteInput !== "ELIMINAR"}>Eliminar mi cuenta</Button></>
+      }>
         <div className="space-y-4">
           <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-700 dark:text-red-300 font-medium">
-              ⚠️ Esta acción no se puede deshacer. Tu cuenta y todos tus datos
-              serán eliminados permanentemente en 30 días.
-            </p>
+            <p className="text-sm text-red-700 dark:text-red-300 font-medium">⚠️ Esta acción no se puede deshacer. Tu cuenta y datos serán eliminados en 30 días.</p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Para confirmar, escribe{" "}
-              <code className="bg-slate-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-bold text-red-600 dark:text-red-400">
-                ELIMINAR
-              </code>
+              Escribe <code className="bg-slate-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-bold text-red-600 dark:text-red-400">ELIMINAR</code> para confirmar
             </label>
-            <input
-              type="text"
-              value={deleteInput}
-              onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder="ELIMINAR"
-              className={cn(
-                "input-base",
-                deleteInput === "ELIMINAR" &&
-                  "border-red-500 focus:border-red-500 focus:shadow-red-100 dark:focus:shadow-red-900/30",
-              )}
-              autoFocus
-            />
+            <input type="text" value={deleteInput} onChange={(e) => setDeleteInput(e.target.value)} placeholder="ELIMINAR"
+              className={cn("input-base", deleteInput === "ELIMINAR" && "border-red-500")} autoFocus />
           </div>
         </div>
       </Modal>

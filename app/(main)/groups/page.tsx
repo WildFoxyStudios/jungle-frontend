@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Globe,
   Lock,
   Plus,
   Search,
   Users,
-  Settings,
   LogIn,
   CheckCircle,
 } from "lucide-react";
@@ -16,9 +16,7 @@ import { groupsApi } from "@/lib/api-groups";
 import { useApi, useMutation, useInfiniteApi } from "@/hooks/useApi";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -68,6 +66,9 @@ export default function GroupsPage() {
       <CreateGroupModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          window.dispatchEvent(new CustomEvent("refresh-groups"));
+        }}
       />
     </div>
   );
@@ -77,6 +78,8 @@ export default function GroupsPage() {
 
 function DiscoverTab() {
   const [search, setSearch] = useState("");
+  const [privacy, setPrivacy] = useState("");
+  const [sortBy, setSortBy] = useState("");
   const debouncedSearch = useDebounce(search, 300);
 
   const {
@@ -85,9 +88,16 @@ function DiscoverTab() {
     loadingMore,
     hasMore,
     loadMore,
+    refresh,
   } = useInfiniteApi(
-    (offset, limit) => groupsApi.list({ limit, offset }),
-    [],
+    (offset, limit) =>
+      groupsApi.list({
+        limit,
+        offset,
+        privacy: privacy || undefined,
+        sort_by: sortBy || undefined,
+      }),
+    [privacy, sortBy],
     12,
   );
 
@@ -103,35 +113,67 @@ function DiscoverTab() {
     groupsApi.join(id),
   );
 
+  // Listen for refresh event from CreateGroupModal
+  useEffect(() => {
+    const handleRefresh = () => refresh();
+    window.addEventListener("refresh-groups", handleRefresh);
+    return () => window.removeEventListener("refresh-groups", handleRefresh);
+  }, [refresh]);
+
   const handleJoin = async (groupId: string, name: string) => {
-    await joinGroup(groupId);
-    setJoined((prev) => new Set([...prev, groupId]));
-    toast.success(`Te uniste a "${name}"`);
+    try {
+      await joinGroup(groupId);
+      setJoined((prev) => new Set([...prev, groupId]));
+      toast.success(`Te uniste a "${name}"`);
+    } catch {
+      toast.error("Error al unirse al grupo");
+    }
   };
 
-  const filtered = search
+  const filtered = debouncedSearch
     ? groups.filter(
         (g) =>
-          g.name.toLowerCase().includes(search.toLowerCase()) ||
-          g.description?.toLowerCase().includes(search.toLowerCase()),
+          g.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          g.description?.toLowerCase().includes(debouncedSearch.toLowerCase()),
       )
     : groups;
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-        />
-        <input
-          type="search"
-          placeholder="Buscar grupos..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input-base pl-9"
-        />
+      {/* Search + Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            type="search"
+            placeholder="Buscar grupos..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-base pl-9"
+          />
+        </div>
+        <select
+          value={privacy}
+          onChange={(e) => setPrivacy(e.target.value)}
+          className="input-base w-auto min-w-[140px]"
+        >
+          <option value="">Todos</option>
+          <option value="public">Públicos</option>
+          <option value="private">Privados</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="input-base w-auto min-w-[160px]"
+        >
+          <option value="">Más miembros</option>
+          <option value="members">Más miembros</option>
+          <option value="recent">Más recientes</option>
+          <option value="active">Más activos</option>
+        </select>
       </div>
 
       {/* Grid */}
@@ -186,18 +228,29 @@ function DiscoverTab() {
 // ─── My groups tab ────────────────────────────────────────────────────────────
 
 function MyGroupsTab() {
-  const { data: groups, loading } = useApi(() => groupsApi.list(), []);
+  const { data: groups, loading, refresh } = useApi(() => groupsApi.myGroups(), []);
   const toast = useToast();
   const { execute: leaveGroup } = useMutation((id: string) =>
     groupsApi.leave(id),
   );
   const [left, setLeft] = useState<Set<string>>(new Set());
 
+  // Listen for refresh event from CreateGroupModal
+  useEffect(() => {
+    const handleRefresh = () => refresh();
+    window.addEventListener("refresh-groups", handleRefresh);
+    return () => window.removeEventListener("refresh-groups", handleRefresh);
+  }, [refresh]);
+
   const handleLeave = async (groupId: string, name: string) => {
     if (!confirm(`¿Salir del grupo "${name}"?`)) return;
-    await leaveGroup(groupId);
-    setLeft((prev) => new Set([...prev, groupId]));
-    toast.info(`Saliste de "${name}"`);
+    try {
+      await leaveGroup(groupId);
+      setLeft((prev) => new Set([...prev, groupId]));
+      toast.info(`Saliste de "${name}"`);
+    } catch {
+      toast.error("Error al salir del grupo");
+    }
   };
 
   const visible = (groups ?? []).filter((g) => !left.has(g.id));
@@ -367,11 +420,14 @@ function GroupCard({
 function CreateGroupModal({
   open,
   onClose,
+  onCreated,
 }: {
   open: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [privacy, setPrivacy] = useState<"public" | "private">("public");
@@ -390,9 +446,10 @@ function CreateGroupModal({
       setName("");
       setDescription("");
       setPrivacy("public");
+      onCreated?.();
       onClose();
       // Navigate to the new group
-      window.location.href = `/groups/${group.id}`;
+      router.push(`/groups/${group.id}`);
     } catch {
       toast.error("Error al crear el grupo");
     } finally {

@@ -152,7 +152,8 @@ export default function OrdersPage() {
         </div>
         <Link href="/marketplace">
           <Button variant="secondary" leftIcon={<ShoppingBag size={15} />}>
-            Seguir comprando
+            <span className="hidden sm:inline">Seguir comprando</span>
+            <span className="sm:hidden">Comprar</span>
           </Button>
         </Link>
       </div>

@@ -42,7 +42,7 @@ export default function MainLayout({
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-slate-50 dark:bg-gray-950">
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 overflow-x-hidden">
         {/* Top navbar — fixed, z-40 */}
         <Navbar />
 
@@ -55,14 +55,14 @@ export default function MainLayout({
           {/* Main content */}
           <main
             className={cn(
-              "flex-1 min-h-[calc(100vh-3.5rem)] transition-all duration-200",
+              "flex-1 min-w-0 min-h-[calc(100vh-3.5rem)] transition-all duration-200",
               // Offset to avoid being hidden behind the fixed sidebar
               isWidePage ? "md:ml-16" : "md:ml-[260px]",
               // Bottom padding on mobile so content isn't hidden behind the bottom nav
-              "pb-16 md:pb-0",
+              "pb-20 md:pb-0",
             )}
           >
-            <div className="max-w-screen-2xl mx-auto">{children}</div>
+            <div className="max-w-screen-2xl mx-auto w-full overflow-x-hidden">{children}</div>
           </main>
         </div>
 

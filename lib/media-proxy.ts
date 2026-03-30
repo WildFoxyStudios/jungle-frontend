@@ -16,9 +16,19 @@ export function getProxyUrl(originalUrl: string): string {
     return `${BACKEND_URL}/proxy/media?url=${encodeURIComponent(originalUrl)}`;
   }
 
-  // Para URLs de desarrollo (localhost), también usar proxy
+  // Para URLs de desarrollo local, usar acceso directo
   if (originalUrl.includes('localhost:8080/uploads')) {
-    return `${BACKEND_URL}/proxy/media?url=${encodeURIComponent(originalUrl)}`;
+    return originalUrl; // Acceso directo a archivos locales
+  }
+
+  // Para uploads relativos, convertir a URL completa del backend
+  if (originalUrl.startsWith('/uploads/')) {
+    return `${BACKEND_URL.replace('/api', '')}${originalUrl}`;
+  }
+
+  // Para URLs que empiezan con uploads/ (sin / inicial)
+  if (originalUrl.startsWith('uploads/')) {
+    return `${BACKEND_URL.replace('/api', '')}/${originalUrl}`;
   }
 
   // Para otros casos (imágenes externas), devolver la URL original
@@ -36,6 +46,5 @@ export function getProxyUrls(urls: string[]): string[] {
  * Verifica si una URL necesita proxy
  */
 export function needsProxy(url: string): boolean {
-  return url.includes('fly.storage.tigris.dev') || 
-         url.includes('localhost:8080/uploads');
+  return url.includes('fly.storage.tigris.dev');
 }

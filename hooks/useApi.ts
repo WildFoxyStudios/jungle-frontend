@@ -193,7 +193,12 @@ export function useInfiniteApi<T>(
         if (reset) {
           setItems(page);
         } else {
-          setItems((prev) => [...prev, ...page]);
+          // Deduplicate by id to prevent React key warnings from overlapping pages
+          setItems((prev) => {
+            const existingIds = new Set(prev.map((item: any) => item.id));
+            const newItems = page.filter((item: any) => !existingIds.has(item.id));
+            return [...prev, ...newItems];
+          });
         }
 
         offsetRef.current += page.length;

@@ -11,15 +11,21 @@ interface TabsContext {
 const Ctx = createContext<TabsContext | undefined>(undefined);
 
 interface TabsProps {
-  defaultTab: string;
+  defaultTab?: string;
+  value?: string;
   children: ReactNode;
   className?: string;
   onChange?: (tab: string) => void;
 }
 
-export function Tabs({ defaultTab, children, className, onChange }: TabsProps) {
-  const [active, setActive] = useState(defaultTab);
-  const handleChange = (tab: string) => { setActive(tab); onChange?.(tab); };
+export function Tabs({ defaultTab, value, children, className, onChange }: TabsProps) {
+  const [internal, setInternal] = useState(defaultTab ?? "");
+  const isControlled = value !== undefined;
+  const active = isControlled ? value : internal;
+  const handleChange = (tab: string) => {
+    if (!isControlled) setInternal(tab);
+    onChange?.(tab);
+  };
   return (
     <Ctx.Provider value={{ active, setActive: handleChange }}>
       <div className={className}>{children}</div>
@@ -36,7 +42,7 @@ interface TabListProps {
 export function TabList({ children, className, variant = "line" }: TabListProps) {
   return (
     <div className={cn(
-      "flex",
+      "flex overflow-x-auto no-scrollbar",
       variant === "line" && "border-b border-slate-200 dark:border-slate-700",
       variant === "pills" && "gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl",
       variant === "boxed" && "gap-0 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden",
@@ -65,7 +71,7 @@ export function Tab({ value, children, className, icon, badge }: TabProps) {
       aria-selected={isActive}
       onClick={() => setActive(value)}
       className={cn(
-        "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all",
+        "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap shrink-0",
         "focus-visible:outline-none",
         isActive
           ? "text-indigo-600 dark:text-indigo-400"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,11 +17,11 @@ interface ModalProps {
 }
 
 const sizes = {
-  sm:   "max-w-sm",
-  md:   "max-w-lg",
-  lg:   "max-w-2xl",
-  xl:   "max-w-4xl",
-  full: "max-w-[95vw] max-h-[95vh]",
+  sm:   "max-w-[95vw] sm:max-w-sm",
+  md:   "max-w-[95vw] sm:max-w-lg",
+  lg:   "max-w-[95vw] sm:max-w-2xl",
+  xl:   "max-w-[95vw] sm:max-w-4xl",
+  full: "max-w-[100vw] sm:max-w-[95vw] max-h-[95vh]",
 };
 
 export function Modal({ open, onClose, title, children, size = "md", className, hideClose, footer }: ModalProps) {
@@ -41,8 +42,8 @@ export function Modal({ open, onClose, title, children, size = "md", className, 
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -55,17 +56,17 @@ export function Modal({ open, onClose, title, children, size = "md", className, 
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={cn(
-          "relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl animate-fade-in-scale",
-          "flex flex-col max-h-[90vh]",
+          "relative w-full bg-white dark:bg-gray-900 sm:rounded-2xl shadow-2xl animate-fade-in-scale",
+          "flex flex-col max-h-[90vh] rounded-t-2xl sm:rounded-2xl",
           sizes[size],
           className,
         )}
       >
         {/* Header */}
         {(title || !hideClose) && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
             {title && (
-              <h2 id="modal-title" className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              <h2 id="modal-title" className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-50">
                 {title}
               </h2>
             )}
@@ -81,14 +82,15 @@ export function Modal({ open, onClose, title, children, size = "md", className, 
           </div>
         )}
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5">{children}</div>
         {/* Footer */}
         {footer && (
-          <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-700 shrink-0 flex justify-end gap-3">
+          <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-slate-200 dark:border-slate-700 shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
