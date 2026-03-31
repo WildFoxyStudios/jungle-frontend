@@ -46,28 +46,38 @@ function SidebarItem({ href, icon: Icon, label, badge, collapsed }: SidebarItemP
   return (
     <Link
       href={href}
-      title={collapsed ? label : undefined}
+      title={label}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group relative",
+        "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
         collapsed ? "justify-center" : "",
         active
-          ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-semibold"
-          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-slate-900 dark:hover:text-slate-100",
+          ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-semibold shadow-sm"
+          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-slate-900 dark:hover:text-slate-100 hover:scale-[1.02]",
       )}
     >
-      <Icon size={20} className="shrink-0" />
+      <Icon 
+        size={20} 
+        className={cn(
+          "shrink-0 transition-transform duration-200",
+          active && "scale-110"
+        )} 
+      />
       {!collapsed && (
         <span className="text-sm font-medium truncate">{label}</span>
       )}
       {badge !== undefined && badge > 0 && (
         <span
           className={cn(
-            "ml-auto text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-tight",
-            collapsed && "absolute top-1 right-1 ml-0",
+            "ml-auto text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-tight animate-pulse",
+            collapsed && "absolute top-1 right-1 ml-0 scale-90",
           )}
         >
           {badge > 99 ? "99+" : badge}
         </span>
+      )}
+      {/* Active indicator */}
+      {active && !collapsed && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 dark:bg-indigo-400 rounded-r-full" />
       )}
     </Link>
   );

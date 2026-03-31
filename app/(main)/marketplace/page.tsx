@@ -410,7 +410,7 @@ export default function MarketplacePage() {
         </p>
       )}
 
-      {/* ── Filters modal ─────────────────────────────────────────────────── */}
+      {/* ─�� Filters modal ─────────────────────────────────────────────────── */}
       <FiltersModal
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
@@ -456,7 +456,7 @@ function ProductCard({
   return (
     <div
       className={cn(
-        "surface group overflow-hidden hover:shadow-lg transition-all duration-200 animate-fade-in-up",
+        "surface group overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 animate-fade-in-up",
         `stagger-${(index % 5) + 1}`,
       )}
     >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   MessageCircle,
@@ -66,6 +66,23 @@ export function PostCard({ post, onDelete, onUpdate, showGroupLink, initialReact
   const [localCommentsCount, setLocalCommentsCount] = useState(post.comments_count ?? 0);
   const [localSharesCount] = useState(post.shares_count ?? 0);
   const [saved, setSaved] = useState(initialSaved ?? false);
+
+  // Sync state when props change (e.g., when post updates)
+  useEffect(() => {
+    setCurrentReaction(initialReaction ?? null);
+  }, [initialReaction]);
+
+  useEffect(() => {
+    setSaved(initialSaved ?? false);
+  }, [initialSaved]);
+
+  useEffect(() => {
+    setLocalReactionsCount(post.reactions_count ?? 0);
+  }, [post.reactions_count]);
+
+  useEffect(() => {
+    setLocalCommentsCount(post.comments_count ?? 0);
+  }, [post.comments_count]);
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);

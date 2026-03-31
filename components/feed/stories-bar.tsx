@@ -246,12 +246,19 @@ export function StoriesBar() {
               />
             )}
 
-            {/* Progress bar */}
-            <div className="absolute top-3 left-3 right-3 h-0.5 bg-white/30 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full"
-                style={{ width: "50%", transition: "width linear 15s" }}
-              />
+            {/* Progress bars for multiple stories */}
+            <div className="absolute top-3 left-3 right-3 flex gap-1">
+              {allStories.map((_, idx) => (
+                <div key={idx} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full bg-white rounded-full transition-all",
+                      idx < storyIndex ? "w-full" : idx === storyIndex ? "animate-progress-bar" : "w-0"
+                    )}
+                    style={idx === storyIndex ? { animation: "progress 15s linear forwards" } : {}}
+                  />
+                </div>
+              ))}
             </div>
 
             {/* Header */}
