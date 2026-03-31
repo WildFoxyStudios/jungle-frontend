@@ -171,8 +171,9 @@ const nextConfig: NextConfig = {
   // In production the backend URL is set via NEXT_PUBLIC_API_URL and the
   // frontend calls it directly (CORS is handled by the Axum CorsLayer).
   async rewrites() {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+    const apiUrl = (
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api"
+    ).trim();
     // Only proxy when running locally (not on Vercel / production)
     if (process.env.NODE_ENV !== "development") return [];
 
