@@ -231,7 +231,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
               <div className="md:col-span-2 space-y-4">
                 {loadingPosts && Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} />)}
                 {!loadingPosts && posts.length === 0 && <EmptyState title="Sin publicaciones" description={isOwnProfile ? "Comparte algo con tus amigos." : "Este usuario no tiene publicaciones."} />}
-                {posts.map((post) => <PostCard key={post.id} post={{ ...post, user_name: post.user_name || profile?.full_name || profile?.username, user_profile_picture: post.user_profile_picture || profile?.profile_picture_url }} />)}
+                {posts.map((post) => <PostCard key={post.id} post={{ ...post, user_name: post.user_name || profile?.user?.full_name || profile?.user?.username, user_profile_picture: post.user_profile_picture || profile?.user?.profile_picture_url }} />)}
                 {loadingMore && <PostSkeleton />}
                 <div ref={sentinelRef} className="h-1" />
               </div>
