@@ -13,7 +13,7 @@ export const adminApi = axios.create({
 
 // Forward the auth token from the main api instance
 adminApi.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("session_token") : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
