@@ -1,7 +1,24 @@
-import { api } from "./api";
+import axios from "axios";
+import { api, API_BASE_URL } from "./api";
 
-// Re-export the raw api instance for admin pages that use it directly
-export { api as adminApi };
+// Admin pages use paths like "/api/admin/stats" explicitly,
+// so the adminApi base must NOT include the /api suffix.
+const ADMIN_BASE = API_BASE_URL.replace(/\/api$/, "");
+
+export const adminApi = axios.create({
+  baseURL: ADMIN_BASE,
+  headers: { "Content-Type": "application/json" },
+  timeout: 15_000,
+});
+
+// Forward the auth token from the main api instance
+adminApi.interceptors.request.use((config) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // ─── Admin API (named functions) ──────────────────────────────────────────────
 
