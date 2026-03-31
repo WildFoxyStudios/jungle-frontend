@@ -903,6 +903,7 @@ export interface WatchVideo {
   id: string;
   user_id: string;
   username?: string;
+  avatar_url?: string;
   title: string;
   description?: string;
   video_url: string;
@@ -916,6 +917,9 @@ export interface WatchVideo {
   is_public: boolean;
   allow_comments: boolean;
   is_trending: boolean;
+  is_liked?: boolean;
+  is_saved?: boolean;
+  is_following?: boolean;
   created_at: string;
   published_at?: string;
 }

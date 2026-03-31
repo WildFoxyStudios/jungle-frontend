@@ -278,7 +278,7 @@ export function UploadVideoModal({ open, onClose, onCreated }: UploadVideoModalP
               )}
             </div>
           ) : (
-            <label className="upload-zone block aspect-video flex flex-col items-center justify-center cursor-pointer">
+            <label className="upload-zone aspect-video flex flex-col items-center justify-center cursor-pointer">
               <input
                 type="file"
                 accept="video/mp4,video/webm,video/quicktime"
