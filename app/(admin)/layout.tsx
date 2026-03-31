@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
@@ -58,6 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!user || (user.role !== "admin" && user.role !== "moderator")) return null;
 
   return (
+    <ToastProvider>
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
       {/* Mobile hamburger */}
       <button onClick={() => setSidebarOpen(true)}
@@ -112,5 +114,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }
