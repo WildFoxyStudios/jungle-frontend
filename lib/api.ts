@@ -128,18 +128,23 @@ api.interceptors.response.use(
 
     // ── 401 global redirect ────────────────────────────────────────
     if (error.response?.status === 401) {
-      tokenStorage.remove();
-      if (typeof window !== "undefined") {
-        const path = window.location.pathname;
-        const authPaths = [
-          "/login",
-          "/register",
-          "/forgot-password",
-          "/reset-password",
-          "/verify-email",
-        ];
-        if (!authPaths.some((p) => path.startsWith(p))) {
-          window.location.href = "/login";
+      // Don't nuke the token for the login request itself
+      const url = error.config?.url ?? "";
+      const isAuthRequest = url.includes("/auth/login") || url.includes("/auth/register") || url.includes("/auth/2fa");
+      if (!isAuthRequest) {
+        tokenStorage.remove();
+        if (typeof window !== "undefined") {
+          const path = window.location.pathname;
+          const authPaths = [
+            "/login",
+            "/register",
+            "/forgot-password",
+            "/reset-password",
+            "/verify-email",
+          ];
+          if (!authPaths.some((p) => path.startsWith(p))) {
+            window.location.href = "/login";
+          }
         }
       }
     }
