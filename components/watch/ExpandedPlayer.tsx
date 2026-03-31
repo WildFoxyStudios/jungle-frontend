@@ -65,11 +65,15 @@ export function ExpandedPlayer({ videoId, onClose }: ExpandedPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
+  // Track if view has been recorded
+  const viewRecordedRef = useRef(false);
+
   // Load video data
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    viewRecordedRef.current = false; // Reset view tracking on new video
     watchApi
       .getVideo(videoId)
       .then((data) => {
@@ -85,6 +89,28 @@ export function ExpandedPlayer({ videoId, onClose }: ExpandedPlayerProps) {
       cancelled = true;
     };
   }, [videoId]);
+
+  // Record view after 3 seconds of playback
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !video) return;
+
+    const handleTimeUpdate = () => {
+      if (el.currentTime >= 3 && !viewRecordedRef.current) {
+        viewRecordedRef.current = true;
+        const percentage = el.duration > 0 ? (el.currentTime / el.duration) * 100 : 0;
+        watchApi.recordView(videoId, {
+          watch_time: Math.round(el.currentTime),
+          watch_percentage: Math.round(percentage),
+        }).catch(() => {
+          // Silent fail for view recording
+        });
+      }
+    };
+
+    el.addEventListener("timeupdate", handleTimeUpdate);
+    return () => el.removeEventListener("timeupdate", handleTimeUpdate);
+  }, [videoId, video]);
 
   // Escape key listener
   useEffect(() => {
@@ -355,6 +381,8 @@ export function ExpandedPlayer({ videoId, onClose }: ExpandedPlayerProps) {
             {/* Action bar (horizontal) */}
             <ActionBar
               video={video}
+              isLiked={video.is_liked}
+              isSaved={video.is_saved}
               orientation="horizontal"
               onCommentClick={() => {
                 /* comments panel is already visible */

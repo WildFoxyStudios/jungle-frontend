@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { UserPlus, Calendar } from "lucide-react";
+import { UserPlus, Calendar, X, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +10,7 @@ import { useApi, useMutation } from "@/hooks/useApi";
 import { friendsApi } from "@/lib/api-friends";
 import { eventsApi } from "@/lib/api-events";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -25,11 +27,24 @@ export function SidebarRight() {
     friendsApi.sendRequest(id),
   );
   const toast = useToast();
+  
+  // Track sent requests and dismissed suggestions
+  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const handleAddFriend = async (userId: string, name: string) => {
+    setSentRequests(prev => new Set([...prev, userId]));
     await sendReq(userId);
     toast.success(`Solicitud enviada a ${name}`);
   };
+  
+  const handleDismiss = (userId: string) => {
+    setDismissed(prev => new Set([...prev, userId]));
+  };
+  
+  const visibleSuggestions = (suggestions ?? []).filter(
+    s => !dismissed.has(String(s.id))
+  );
 
   return (
     <aside className="hidden xl:block w-[280px] shrink-0 space-y-4">
@@ -58,39 +73,66 @@ export function SidebarRight() {
                 <Skeleton className="h-7 w-16" />
               </div>
             ))
-          : suggestions?.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 py-2">
-                <Link href={`/profile/${s.id}`}>
-                  <Avatar
-                    src={s.profile_picture_url}
-                    alt={s.full_name}
-                    size="md"
-                    fallbackName={s.full_name}
-                  />
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/profile/${s.id}`}
-                    className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate block hover:underline"
-                  >
-                    {s.full_name}
-                  </Link>
-                  <p className="text-xs text-slate-500 truncate">
-                    {s.mutual_friends_count
-                      ? `${s.mutual_friends_count} amigos en común`
-                      : (s.reason ?? "@" + s.username)}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  leftIcon={<UserPlus size={13} />}
-                  onClick={() => handleAddFriend(String(s.id), s.full_name)}
+          : visibleSuggestions.map((s) => {
+              const isSent = sentRequests.has(String(s.id));
+              return (
+                <div 
+                  key={s.id} 
+                  className="flex items-center gap-3 py-2 group relative animate-fade-in"
                 >
-                  Agregar
-                </Button>
-              </div>
-            ))}
+                  {/* Dismiss button */}
+                  <button
+                    onClick={() => handleDismiss(String(s.id))}
+                    className="absolute -top-1 -right-1 p-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Descartar"
+                  >
+                    <X size={12} />
+                  </button>
+                  
+                  <Link href={`/profile/${s.id}`}>
+                    <Avatar
+                      src={s.profile_picture_url}
+                      alt={s.full_name}
+                      size="md"
+                      fallbackName={s.full_name}
+                    />
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/profile/${s.id}`}
+                      className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate block hover:underline"
+                    >
+                      {s.full_name}
+                    </Link>
+                    <p className="text-xs text-slate-500 truncate">
+                      {s.mutual_friends_count
+                        ? `${s.mutual_friends_count} amigos en comun`
+                        : (s.reason ?? "@" + s.username)}
+                    </p>
+                  </div>
+                  {isSent ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      leftIcon={<UserCheck size={13} />}
+                      disabled
+                      className="text-green-600 dark:text-green-400"
+                    >
+                      Enviada
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      leftIcon={<UserPlus size={13} />}
+                      onClick={() => handleAddFriend(String(s.id), s.full_name)}
+                    >
+                      Agregar
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
       </div>
 
       {/* Upcoming events */}

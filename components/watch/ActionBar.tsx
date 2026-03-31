@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Bookmark, Eye } from "lucide-react";
 import { watchApi } from "@/lib/api-watch";
 import { useToast } from "@/components/ui/toast";
@@ -22,7 +22,7 @@ export interface ActionBarProps {
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+  return String(n ?? 0);
 }
 
 /**
@@ -39,10 +39,23 @@ export function ActionBar({
   const toast = useToast();
 
   const [liked, setLiked] = useState(initialLiked);
-  const [likesCount, setLikesCount] = useState(video.likes_count);
+  const [likesCount, setLikesCount] = useState(video.likes_count ?? 0);
   const [saved, setSaved] = useState(initialSaved);
   const [likeBusy, setLikeBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
+
+  // Sync state when props change (e.g., when navigating between videos)
+  useEffect(() => {
+    setLiked(initialLiked);
+  }, [initialLiked]);
+
+  useEffect(() => {
+    setSaved(initialSaved);
+  }, [initialSaved]);
+
+  useEffect(() => {
+    setLikesCount(video.likes_count ?? 0);
+  }, [video.likes_count]);
 
   const handleLikeToggle = async () => {
     if (likeBusy) return;

@@ -332,6 +332,32 @@ body {
         transform: translateY(-120px) scale(0.9) translateX(-50%);
     }
 }
+@keyframes progress {
+    from {
+        width: 0%;
+    }
+    to {
+        width: 100%;
+    }
+}
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
 
 /* ─── Animation classes ───────────────────── */
 .animate-fade-in {
@@ -357,6 +383,15 @@ body {
 }
 .animate-stream-tip {
     animation: streamTip 5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+.animate-progress-bar {
+    animation: progress 15s linear forwards;
+}
+.animate-scale-in {
+    animation: scaleIn 0.2s ease-out both;
+}
+.animate-slide-up {
+    animation: slideUp 0.3s ease-out both;
 }
 
 /* stagger helpers */

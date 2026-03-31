@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Play, Plus, Radio, Film, Tv } from "lucide-react";
+import { Plus, Radio, Film, Tv, Video } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -148,20 +148,29 @@ export default function WatchPage() {
         </div>
 
         <div className="max-w-[900px] mx-auto px-4 py-5 pb-24">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          {/* Header - hidden on lg since sidebar shows it */}
+          <div className="flex items-center justify-between mb-5 lg:hidden">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <Play
+                <Video
                   size={20}
-                  className="text-red-600 dark:text-red-400 ml-0.5"
-                  fill="currentColor"
+                  className="text-red-600 dark:text-red-400"
                 />
               </div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50">
                 Watch
               </h1>
             </div>
+            <Button
+              leftIcon={<Plus size={16} />}
+              onClick={() => setUploadOpen(true)}
+            >
+              Subir
+            </Button>
+          </div>
+          
+          {/* Desktop upload button */}
+          <div className="hidden lg:flex justify-end mb-4">
             <Button
               leftIcon={<Plus size={16} />}
               onClick={() => setUploadOpen(true)}

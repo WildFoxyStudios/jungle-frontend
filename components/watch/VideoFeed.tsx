@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo } from "react";
 import { TrendingUp, Video, RefreshCw } from "lucide-react";
 import { watchApi } from "@/lib/api-watch";
 import { useApi, useInfiniteApi } from "@/hooks/useApi";
@@ -9,10 +9,16 @@ import { VideoCard } from "./VideoCard";
 import { AdCard } from "./AdCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { scoreAndReorderFeed } from "@/lib/watch-algorithm";
 import type { WatchVideo } from "@/lib/types";
+
+/** Format view count for display */
+function formatViewCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n ?? 0);
+}
 
 export interface VideoFeedProps {
   searchQuery?: string;
@@ -159,44 +165,54 @@ export function VideoFeed({
     <div className="space-y-6">
       {/* Trending section */}
       {!searchQuery && !selectedCategory && trending && trending.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 mb-6">
           <div className="flex items-center gap-2">
             <TrendingUp size={18} className="text-amber-500" />
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
               Tendencias
             </h2>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {trending.length} videos populares
+            </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {trending.slice(0, 5).map((v) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {trending.slice(0, 5).map((v, index) => (
               <button
                 key={v.id}
                 onClick={() => onVideoExpand(v.id)}
-                className="surface overflow-hidden text-left hover:ring-2 hover:ring-indigo-300 dark:hover:ring-indigo-700 transition-all"
+                className="surface overflow-hidden text-left hover:ring-2 hover:ring-indigo-300 dark:hover:ring-indigo-700 transition-all rounded-xl group"
               >
                 <div className="relative aspect-video bg-black">
                   {v.thumbnail_url ? (
                     <img
                       src={v.thumbnail_url}
                       alt={v.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center bg-slate-800">
                       <Video size={24} className="text-slate-500" />
                     </div>
                   )}
-                  <div className="absolute top-2 left-2">
-                    <Badge variant="warning" size="sm">
-                      🔥 Tendencia
-                    </Badge>
+                  {/* Ranking number */}
+                  <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">{index + 1}</span>
                   </div>
+                  {/* Duration badge */}
+                  {v.duration > 0 && (
+                    <div className="absolute bottom-2 right-2">
+                      <span className="px-1.5 py-0.5 text-[10px] font-medium bg-black/70 text-white rounded">
+                        {Math.floor(v.duration / 60)}:{String(Math.floor(v.duration % 60)).padStart(2, "0")}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-2">
-                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-2">
                     {v.title}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {v.username ?? "Usuario"} · {v.views_count} vistas
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                    {v.username ?? "Usuario"} · {formatViewCount(v.views_count)} vistas
                   </p>
                 </div>
               </button>

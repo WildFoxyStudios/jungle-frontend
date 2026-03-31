@@ -182,23 +182,24 @@ export function Navbar() {
         </Link>
 
         {/* Search with autocomplete */}
-        <div ref={searchRef} className="relative flex-1 max-w-[160px] sm:max-w-[280px]">
+        <div ref={searchRef} className="relative flex-1 max-w-[180px] sm:max-w-[320px]">
           <form onSubmit={handleSearch}>
-            <div className="relative">
+            <div className="relative group">
               <Search
                 size={14}
-                className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
               />
               <input
                 type="search"
-                placeholder="Buscar..."
+                placeholder="Buscar en Jungle..."
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setDropdownOpen(true);
                 }}
                 onFocus={handleFocus}
-                className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 text-sm bg-slate-100 dark:bg-gray-800 border border-transparent rounded-full focus:outline-none focus:bg-white dark:focus:bg-gray-700 focus:border-indigo-400 transition-all placeholder:text-slate-400"
+                className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 text-sm bg-slate-100 dark:bg-gray-800 border border-transparent rounded-full focus:outline-none focus:bg-white dark:focus:bg-gray-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all placeholder:text-slate-400"
+                aria-label="Buscar"
               />
               {query && (
                 <button
@@ -207,7 +208,8 @@ export function Navbar() {
                     setQuery("");
                     setAutocomplete(null);
                   }}
-                  className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  aria-label="Limpiar busqueda"
                 >
                   <X size={12} className="sm:w-3.5 sm:h-3.5" />
                 </button>
@@ -540,7 +542,7 @@ function NavLink({
   );
 }
 
-// ─── Mobile Sidebar Drawer ────────────────────────────────────────────────────
+// ─── Mobile Sidebar Drawer ────────────────────────────────────────────────���───
 
 const mobileMenuLinks = [
   { href: "/home", icon: Home, label: "Inicio" },
